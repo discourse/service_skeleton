@@ -16,6 +16,8 @@ class ServiceSkeleton
 
   include ServiceSkeleton::LoggingHelpers
 
+  class Terminate < Exception; end
+
   def self.config_class(klass)
     @config_class = klass
   end
@@ -31,29 +33,44 @@ class ServiceSkeleton
   attr_reader :config, :metrics, :logger
 
   def initialize(env)
-    @env = env
-    @config = (self.class.instance_variable_get(:@config_class) || ServiceSkeleton::Config).new(env, self)
-    @logger = @config.logger
+    @env      = env
+    @config   = (self.class.instance_variable_get(:@config_class) || ServiceSkeleton::Config).new(env, self)
+    @logger   = @config.logger
+    @op_mutex = Mutex.new
 
     setup_metrics
     setup_signals
   end
 
   def start
+    @op_mutex.synchronize { @thread = Thread.current }
+
     begin
       start_metrics_server
       start_signal_handler
       run
+    rescue ServiceSkeleton::Terminate
+      # This one is OK
     rescue ServiceSkeleton::Error::InheritanceContractError
       # We want this one to be fatal
       raise
     rescue StandardError => ex
       log_exception(ex)
     end
+
+    @thread = nil
   end
 
   def stop(force = false)
-    shutdown
+    if force
+      @op_mutex.synchronize do
+        if @thread
+          @thread.raise(ServiceSkeleton::Terminate)
+        end
+      end
+    else
+      shutdown
+    end
 
     if @metrics_server
       @metrics_server.shutdown
@@ -79,6 +96,16 @@ class ServiceSkeleton
 
   def run
     raise ServiceSkeleton::Error::InheritanceContractError, "ServiceSkeleton#run method not overridden"
+  end
+
+  def shutdown
+    @op_mutex.synchronize do
+      if @thread
+        @thread.raise(ServiceSkeleton::Terminate)
+        @thread.join
+        @thread = nil
+      end
+    end
   end
 
   def setup_metrics
