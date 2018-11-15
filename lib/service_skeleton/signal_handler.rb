@@ -37,8 +37,8 @@ class ServiceSkeleton
     # @param logger [Logger] the logger to use for all the interesting information
     #   about what we're up to.
     #
-    def initialize(logger:, service:)
-      @logger, @service = logger, service
+    def initialize(logger:, service:, signal_counter:)
+      @logger, @service, @signal_counter = logger, service, signal_counter
 
       @signal_registry = []
 
@@ -84,6 +84,8 @@ class ServiceSkeleton
     end
 
     def start
+      logger.info("SignalHandler#start") { "Starting signal handler with #{@signal_registry.length} hooks" }
+
       @r, @w = IO.pipe
 
       install_signal_handlers
@@ -126,7 +128,7 @@ class ServiceSkeleton
 
       if handler
         logger.debug("SignalHandler#handle_signal") { "#{handler[:signal]} received" }
-        @stats[:signal].increment(signal: handler[:signal].to_s)
+        @signal_counter.increment(signal: handler[:signal].to_s)
         begin
           handler[:callback].call
         rescue => ex
@@ -144,6 +146,8 @@ class ServiceSkeleton
     end
 
     def install_handler(sigspec, i)
+      chain = nil
+
       p = ->(_) do
         @w.write_nonblock(i.chr) rescue nil
         chain.call if chain.respond_to?(:call)

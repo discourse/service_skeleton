@@ -52,13 +52,15 @@ class ServiceSkeleton
     end
   end
 
-  def stop
+  def stop(force = false)
     shutdown
 
     if @metrics_server
       @metrics_server.shutdown
       @metrics_server = nil
     end
+
+    @signal_handler.stop!
   end
 
   def service_name
@@ -106,7 +108,7 @@ class ServiceSkeleton
   end
 
   def setup_signals
-    @signal_handler = ServiceSkeleton::SignalHandler.new(logger: logger, service: self)
+    @signal_handler = ServiceSkeleton::SignalHandler.new(logger: logger, service: self, signal_counter: metrics.counter(:"#{service_name}_signals_handled_total", "How many of each type of signal have been handled"))
 
     @signal_handler.hook_signal("USR1") do
       logger.level -= 1 unless logger.level == Logger::DEBUG

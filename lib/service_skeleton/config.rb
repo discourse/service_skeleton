@@ -7,7 +7,7 @@ class ServiceSkeleton
     attr_reader :logger
 
     def initialize(env, svc)
-      @env = env.dup.freeze
+      @env = env.to_hash.freeze
       @svc = svc
 
       parse_registered_variables(env)
