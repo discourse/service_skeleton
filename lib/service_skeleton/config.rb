@@ -2,12 +2,14 @@ require "to_regexp"
 
 require_relative "./filtering_logger"
 
+require "loggerstash"
+
 class ServiceSkeleton
   class Config
     attr_reader :logger
 
     def initialize(env, svc)
-      @env = env.to_hash.freeze
+      @env = env.to_hash.dup.freeze
       @svc = svc
 
       parse_registered_variables(env)
@@ -45,6 +47,12 @@ class ServiceSkeleton
       end
 
       @logger = Logger.new(log_file || $stderr, shift_age, shift_size)
+
+      if self.logstash_server && !self.logstash_server.empty?
+        loggerstash = Loggerstash.new(logstash_server: logstash_server, logger: @logger)
+        loggerstash.metrics_registry = @svc.metrics
+        loggerstash.attach(@logger)
+      end
 
       if log_enable_timestamps
         @logger.formatter = ->(s, t, p, m) { "#{t.utc.strftime("%FT%T.%NZ")} #{s[0]} [#{p}] #{m}\n" }

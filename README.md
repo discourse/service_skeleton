@@ -304,6 +304,10 @@ using Unix signals or the admin HTTP interface (if enabled), you can tell the
 logger to increase or decrease logging verbosity *without interrupting
 service*.  We are truly living in the future.
 
+Finally, if you're a devotee of the ELK stack, we can automagically send log
+entries straight into logstash, rather than you having to do it in some
+more roundabout fashion.
+
 
 ### Logging Configuration
 
@@ -341,6 +345,15 @@ All are all-uppercase, and the `<SERVICENAME>_` portion is the all-uppercase
 
   Logging levels can be changed at runtime, via [signals](#default-signals) or
   [the HTTP admin interface](#http-admin-interface).
+
+* **`<SERVICENAME>_LOGSTASH_SERVER`** (string; default `""`) -- if set to a
+  non-empty string, we will engage the services of the [loggerstash
+  gem](https://github.com/discourse/loggerstash) on your behalf to send all log
+  entries to the logstash server you specify (as [an `address:port`,
+  `hostname:port`, or SRV
+  record](https://github.com/discourse/logstash_writer#usage).  Just be sure
+  and [configure logstash
+  appropriately](https://github.com/discourse/loggerstash#logstash-configuration).
 
 * **`<SERVICENAME>_LOG_ENABLE_TIMESTAMPS`** (boolean; default: `"no"`) -- if
   set to a true-ish value (`yes`/`y`/`on`/`true`/`1`), then the log entries

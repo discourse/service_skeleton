@@ -63,11 +63,13 @@ class ServiceSkeleton
 
   def stop(force = false)
     if force
+      #:nocov:
       @op_mutex.synchronize do
         if @thread
           @thread.raise(ServiceSkeleton::Terminate)
         end
       end
+      #:nocov:
     else
       shutdown
     end
@@ -99,6 +101,7 @@ class ServiceSkeleton
   end
 
   def shutdown
+    #:nocov:
     @op_mutex.synchronize do
       if @thread
         @thread.raise(ServiceSkeleton::Terminate)
@@ -106,6 +109,7 @@ class ServiceSkeleton
         @thread = nil
       end
     end
+    #:nocov:
   end
 
   def setup_metrics
@@ -135,7 +139,7 @@ class ServiceSkeleton
   end
 
   def setup_signals
-    @signal_handler = ServiceSkeleton::SignalHandler.new(logger: logger, service: self, signal_counter: metrics.counter(:"#{service_name}_signals_handled_total", "How many of each type of signal have been handled"))
+    @signal_handler = ServiceSkeleton::SignalHandler.new(logger: logger, service: self, signal_counter: metrics.counter(:"#{self.service_name}_signals_handled_total", "How many of each type of signal have been handled"))
 
     @signal_handler.hook_signal("USR1") do
       logger.level -= 1 unless logger.level == Logger::DEBUG
@@ -173,6 +177,7 @@ class ServiceSkeleton
 
   @registered_variables = [
     ServiceSkeleton::ConfigVariable.new(:SERVICE_SKELETON_LOG_LEVEL) { "INFO" },
+    ServiceSkeleton::ConfigVariable.new(:SERVICE_SKELETON_LOGSTASH_SERVER) { "" },
     ServiceSkeleton::ConfigVariable.new(:SERVICE_SKELETON_LOG_ENABLE_TIMESTAMPS) { false },
     ServiceSkeleton::ConfigVariable.new(:SERVICE_SKELETON_LOG_FILE) { nil },
     ServiceSkeleton::ConfigVariable.new(:SERVICE_SKELETON_LOG_MAX_FILE_SIZE) { 1048576 },
@@ -182,6 +187,7 @@ class ServiceSkeleton
 
   def self.inherited(subclass)
     subclass.string(:"#{subclass.service_name.upcase}_LOG_LEVEL", default: "INFO")
+    subclass.string(:"#{subclass.service_name.upcase}_LOGSTASH_SERVER", default: "")
     subclass.boolean(:"#{subclass.service_name.upcase}_LOG_ENABLE_TIMESTAMPS", default: false)
     subclass.string(:"#{subclass.service_name.upcase}_LOG_FILE", default: nil)
     subclass.integer(:"#{subclass.service_name.upcase}_LOG_MAX_FILE_SIZE", default: 1048576, range: 0..Float::INFINITY)

@@ -122,19 +122,16 @@ describe ServiceSkeleton do
     end
 
     context "set to a separate class" do
-      let(:svc_class)   { Class.new(ServiceSkeleton) }
-      let(:cfg_class)   { Class.new }
       let(:mock_config) { double(ServiceSkeleton::Config) }
 
       before(:each) do
-        svc_class.config_class(cfg_class)
-        allow(cfg_class).to receive(:new).with(instance_of(Hash), instance_of(svc_class)).and_return(mock_config)
+        allow(CustomConfig).to receive(:new).with(instance_of(Hash), instance_of(ConfigService)).and_return(mock_config)
         allow(mock_config).to receive(:logger).and_return(logger)
         allow(mock_config).to receive(:metrics_port).and_return(nil)
       end
 
       it "instantiates the other class" do
-        svc = svc_class.new({})
+        svc = ConfigService.new({})
 
         expect(svc.config).to eq(mock_config)
       end

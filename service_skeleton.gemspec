@@ -31,6 +31,7 @@ Gem::Specification.new do |s|
   s.required_ruby_version = ">= 2.3.0"
 
   s.add_runtime_dependency "frankenstein", "~> 1.2"
+  s.add_runtime_dependency "loggerstash", "~> 0.0"
   # prometheus-client provides no guaranteed backwards compatibility,
   # and in fact happily breaks things with no notice, so we're stuck
   # with hard-coding a specific version to avoid unexpected disaster.

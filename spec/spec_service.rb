@@ -7,3 +7,10 @@ class SpecService < ServiceSkeleton
     raise Object.const_get(@env["RAISE_EXCEPTION"]) if @env["RAISE_EXCEPTION"]
   end
 end
+
+class CustomConfig < ServiceSkeleton::Config
+end
+
+class ConfigService < ServiceSkeleton
+  config_class CustomConfig
+end

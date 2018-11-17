@@ -31,6 +31,24 @@ describe ServiceSkeleton::Config do
         .to eq("W [Spec] ohai!\n")
     end
 
+    it "doesn't configure Loggerstash by default" do
+      expect(Loggerstash).to_not receive(:new)
+
+      config.logger
+    end
+
+    context "with a logstash server set" do
+      let(:env) { { "SPEC_SERVICE_LOGSTASH_SERVER" => "logstash.example.com:5151" } }
+
+      it "configures loggerstash" do
+        expect(Loggerstash).to receive(:new).with(logstash_server: "logstash.example.com:5151", logger: an_instance_of(Logger)).and_return(mock_loggerstash = instance_double(Loggerstash))
+        expect(mock_loggerstash).to receive(:metrics_registry=).with(an_instance_of(Prometheus::Client::Registry)).ordered
+        expect(mock_loggerstash).to receive(:attach).with(an_instance_of(Logger)).ordered
+
+        config.logger
+      end
+    end
+
     context "with LOG_LEVEL set to a single severity" do
       let(:env) { { "SPEC_SERVICE_LOG_LEVEL" => "warn" } }
 
