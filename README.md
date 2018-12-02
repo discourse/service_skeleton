@@ -489,9 +489,6 @@ metrics](https://www.rubydoc.info/gems/frankenstein/Frankenstein/RubyGCMetrics),
 and [Ruby VM
 metrics](https://www.rubydoc.info/gems/frankenstein/Frankenstein/RubyVMMetrics).
 
-If, for some reason, you *don't* want any default metrics in your bundle of
-metrics, call `no_default_metrics` in your service class definition.
-
 
 ### Metrics Server Configuration
 
@@ -520,9 +517,8 @@ behaviours for common signals.
 
 ### Default Signals
 
-Unless told otherwise, by calling the `no_default_signals` class method in your
-service class' definition, the following signals will be hooked with the following
-behaviour:
+When the `#run` method on your service instance is called, the following
+signals will be hooked with the following behaviour:
 
 * **`SIGUSR1`** -- increase the default minimum severity for messages which
   will be emitted by the logger.  The default severity only applies to log
