@@ -46,7 +46,7 @@ class ServiceSkeleton
     @op_mutex.synchronize { @thread = Thread.current }
 
     begin
-      logger.info(logloc) { "Starting up." }
+      logger.info(logloc) { "Starting service #{service_name}" }
       logger.info(logloc) { (["Environment:"] + config.env.map { |k, v| "#{k}=#{v.inspect}" }).join("\n  ") }
 
       start_metrics_server
