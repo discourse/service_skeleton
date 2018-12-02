@@ -38,8 +38,8 @@ class ServiceSkeleton
     @logger   = @config.logger
     @op_mutex = Mutex.new
 
-    setup_metrics
-    setup_signals
+    initialize_metrics
+    initialize_signals
   end
 
   def start
@@ -112,7 +112,7 @@ class ServiceSkeleton
     #:nocov:
   end
 
-  def setup_metrics
+  def initialize_metrics
     @metrics = Prometheus::Client::Registry.new
 
     Frankenstein::RubyGCMetrics.register(@metrics)
@@ -138,7 +138,7 @@ class ServiceSkeleton
     end
   end
 
-  def setup_signals
+  def initialize_signals
     @signal_handler = ServiceSkeleton::SignalHandler.new(logger: logger, service: self, signal_counter: metrics.counter(:"#{self.service_name}_signals_handled_total", "How many of each type of signal have been handled"))
 
     @signal_handler.hook_signal("USR1") do
