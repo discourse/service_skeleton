@@ -142,7 +142,8 @@ class ServiceSkeleton
   end
 
   def initialize_signals
-    @signal_handler = ServiceSkeleton::SignalHandler.new(logger: logger, service: self, signal_counter: metrics.counter(:"#{self.service_name}_signals_handled_total", "How many of each type of signal have been handled"))
+    metrics.counter(:"#{self.service_name}_signals_handled_total", "How many of each type of signal have been handled")
+    @signal_handler = ServiceSkeleton::SignalHandler.new(logger: logger, service: self, signal_counter: metrics.signals_handled_total)
 
     @signal_handler.hook_signal("USR1") do
       logger.level -= 1 unless logger.level == Logger::DEBUG
