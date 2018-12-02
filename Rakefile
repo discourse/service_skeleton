@@ -36,6 +36,12 @@ RSpec::Core::RakeTask.new :test do |t|
   t.pattern = "spec/**/*_spec.rb"
 end
 
+class Bundler::GemHelper
+  def already_tagged?
+    true
+  end
+end
+
 Bundler::GemHelper.install_tasks
 task :release do
   sh "git release"
