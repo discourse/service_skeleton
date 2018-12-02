@@ -17,5 +17,10 @@ class ServiceSkeleton
         (["#{explanation}#{explanation ? ": " : ""}#{ex.message} (#{ex.class})"] + ex.backtrace).join("\n  ")
       end
     end
+
+    def logloc
+      loc = caller_locations.first
+      "#{self.class}##{loc.label}"
+    end
   end
 end

@@ -84,7 +84,7 @@ class ServiceSkeleton
     end
 
     def start
-      logger.info("SignalHandler#start") { "Starting signal handler with #{@signal_registry.length} hooks" }
+      logger.info(logloc) { "Starting signal handler with #{@signal_registry.length} hooks" }
 
       @r, @w = IO.pipe
 
@@ -95,14 +95,14 @@ class ServiceSkeleton
           if ios = IO.select([@r])
             if ios.first.include?(@r)
               if ios.first.first.eof?
-                logger.info("SignalHandler#run") { "Signal pipe closed; shutting down" }
+                logger.info(logloc) { "Signal pipe closed; shutting down" }
                 break
               else
                 c = ios.first.first.read_nonblock(1)
                 handle_signal(c)
               end
             else
-              logger.error("SignalHandler#run") { "Mysterious return from select: #{ios.inspect}" }
+              logger.error(logloc) { "Mysterious return from select: #{ios.inspect}" }
             end
           end
         rescue StandardError => ex
@@ -127,7 +127,7 @@ class ServiceSkeleton
       handler = @signal_registry[char.ord]
 
       if handler
-        logger.debug("SignalHandler#handle_signal") { "#{handler[:signal]} received" }
+        logger.debug(logloc) { "#{handler[:signal]} received" }
         @signal_counter.increment(signal: handler[:signal].to_s)
         begin
           handler[:callback].call
@@ -135,7 +135,7 @@ class ServiceSkeleton
           log_exception(ex) { "Exception in signal handler" }
         end
       else
-        logger.error("SignalHandler#handle_signal") { "Unrecognised signal character: #{char.inspect}" }
+        logger.error(logloc) { "Unrecognised signal character: #{char.inspect}" }
       end
     end
 

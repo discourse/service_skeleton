@@ -57,6 +57,7 @@ describe ServiceSkeleton do
 
         expect(Frankenstein::Server).to receive(:new).with(port: 54321, logger: logger, metrics_prefix: :metrics_server, registry: instance_of(Prometheus::Client::Registry)).and_return(mock_metrics_server)
         expect(mock_metrics_server).to receive(:run)
+        expect(logger).to receive(:info).with("SpecService#start_metrics_server")
 
         svc.start
       end

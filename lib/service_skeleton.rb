@@ -126,7 +126,7 @@ class ServiceSkeleton
 
   def start_metrics_server
     if config.metrics_port
-      logger.info(self.class.to_s) { "Starting metrics server on port #{config.metrics_port}" }
+      logger.info(logloc) { "Starting metrics server on port #{config.metrics_port}" }
 
       @metrics_server = Frankenstein::Server.new(
         port: config.metrics_port,
