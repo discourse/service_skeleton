@@ -6,7 +6,7 @@ require "loggerstash"
 
 class ServiceSkeleton
   class Config
-    attr_reader :logger
+    attr_reader :logger, :env
 
     def initialize(env, svc)
       @env = env.to_hash.dup.freeze
