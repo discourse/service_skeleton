@@ -165,7 +165,7 @@ describe ServiceSkeleton::Config do
       ]
     end
 
-    it "deletes the variable from the ENV" do
+    it "redacts the variable from the ENV" do
       env = {
         "SEKRIT" => "x",
         "PUBLIC" => "y",
@@ -175,7 +175,7 @@ describe ServiceSkeleton::Config do
         ServiceSkeleton::Config.new(env, svc)
       end
 
-      expect(env).to eq("PUBLIC" => "y")
+      expect(env).to eq("PUBLIC" => "y", "SEKRIT" => "*SENSITIVE*")
     end
 
     it "freaks out if it doesn't have the real ENV" do

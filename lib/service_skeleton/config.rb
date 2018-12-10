@@ -9,10 +9,10 @@ class ServiceSkeleton
     attr_reader :logger, :env
 
     def initialize(env, svc)
-      @env = env.to_hash.dup.freeze
       @svc = svc
 
       parse_registered_variables(env)
+      @env = env.to_hash.dup.freeze
       setup_logger
     end
 
@@ -34,7 +34,7 @@ class ServiceSkeleton
             raise ServiceSkeleton::Error::CannotSanitizeEnvironmentError,
                   "Attempted to sanitize sensitive variable #{var.name}, but was not passed the ENV object"
           end
-          env.delete(var.name.to_s)
+          env[var.name.to_s] = "*SENSITIVE*"
         end
       end
     end
