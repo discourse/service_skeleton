@@ -148,9 +148,9 @@ class ServiceSkeleton
     def install_handler(sigspec, i)
       chain = nil
 
-      p = ->(_) do
+      p = ->(*args) do
         @w.write_nonblock(i.chr) rescue nil
-        chain.call if chain.respond_to?(:call)
+        chain.call(*args) if chain.respond_to?(:call)
       end
       chain = Signal.trap(sigspec[:signal], &p)
 
