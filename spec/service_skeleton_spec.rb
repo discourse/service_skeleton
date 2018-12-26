@@ -94,6 +94,13 @@ describe ServiceSkeleton do
     it "calculates the service name from the class name" do
       expect(SpecService.new({}).__send__(:service_name)).to eq("spec_service")
     end
+
+    it "safely handles an anonymous class" do
+      klass = Class.new(ServiceSkeleton)
+
+      expect { klass.new({}) }.to_not raise_error
+      expect(klass.new({}).__send__(:service_name)).to match(/class_0x\h+/)
+    end
   end
 
   describe "#config" do

@@ -28,6 +28,7 @@ class ServiceSkeleton
       .gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2')
       .gsub(/([a-z\d])([A-Z])/, '\1_\2')
       .downcase
+      .gsub(/[^a-zA-Z0-9_]/, "_")
   end
 
   attr_reader :config, :metrics, :logger
