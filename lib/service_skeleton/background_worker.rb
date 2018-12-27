@@ -54,15 +54,24 @@ class ServiceSkeleton
       end
     end
 
-    def stop!
+    def stop!(force = nil)
       @bg_worker_op_mutex.synchronize do
         return if @bg_worker_thread.nil?
 
         logger.debug("BackgroundWorker(#{self.class})#stop!") { "Terminating worker thread #{Thread.current.object_id} as requested" }
 
-        shutdown
+        if force == :force
+          @bg_worker_thread.raise(TerminateBackgroundThread)
+        else
+          shutdown
+        end
 
-        @bg_worker_thread.join
+        begin
+          @bg_worker_thread.join
+        rescue TerminateBackgroundThread
+          nil
+        end
+
         @bg_worker_thread = nil
 
         logger.debug("BackgroundWorker(#{self.class})#stop!") { "Worker thread terminated" }
