@@ -23,12 +23,7 @@ class ServiceSkeleton
   end
 
   def self.service_name
-    self.to_s
-      .gsub("::", "_")
-      .gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2')
-      .gsub(/([a-z\d])([A-Z])/, '\1_\2')
-      .downcase
-      .gsub(/[^a-zA-Z0-9_]/, "_")
+    service_name_from_class(self)
   end
 
   attr_reader :config, :metrics, :logger
@@ -99,6 +94,15 @@ class ServiceSkeleton
   end
 
   private
+
+  def self.service_name_from_class(klass)
+    klass.to_s
+      .gsub("::", "_")
+      .gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2')
+      .gsub(/([a-z\d])([A-Z])/, '\1_\2')
+      .downcase
+      .gsub(/[^a-zA-Z0-9_]/, "_")
+  end
 
   def run
     raise ServiceSkeleton::Error::InheritanceContractError, "ServiceSkeleton#run method not overridden"
