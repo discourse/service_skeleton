@@ -58,7 +58,7 @@ class ServiceSkeleton
       @bg_worker_op_mutex.synchronize do
         return if @bg_worker_thread.nil?
 
-        logger.debug("BackgroundWorker(#{self.class})#stop!") { "Terminating worker thread #{Thread.current.object_id} as requested" }
+        logger.debug("BackgroundWorker(#{self.class})#stop!") { "Terminating worker thread #{@bg_worker_thread.object_id} as requested" }
 
         if force == :force
           @bg_worker_thread.raise(TerminateBackgroundThread)
@@ -67,7 +67,7 @@ class ServiceSkeleton
         end
 
         begin
-          @bg_worker_thread.join
+          @bg_worker_thread.join unless @bg_worker_thread == Thread.current
         rescue TerminateBackgroundThread
           nil
         end
