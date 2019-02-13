@@ -42,6 +42,8 @@ class ServiceSkeleton
 
       @signal_registry = []
 
+      @handler_install_mutex = Mutex.new
+
       super
     end
 
@@ -62,16 +64,18 @@ class ServiceSkeleton
     #   specifier by `Signal.trap`.
     #
     def hook_signal(sig, &blk)
-      @bg_worker_op_mutex.synchronize do
-        handler_num = @signal_registry.length
+      logger.debug(logloc) { "Hooking signal #{sig}" }
 
-        if handler_num > 255
-          raise RuntimeError,
-                "Signal hook limit reached.  Slow down there, pardner"
-        end
+      handler_num = @signal_registry.length
 
-        sigspec = { signal: sig, callback: blk }
+      if handler_num > 255
+        raise RuntimeError,
+              "Signal hook limit reached.  Slow down there, pardner"
+      end
 
+      sigspec = { signal: sig, callback: blk }
+
+      @handler_install_mutex.synchronize do
         if @bg_worker_thread
           install_handler(sigspec, handler_num)
         else
@@ -84,11 +88,13 @@ class ServiceSkeleton
     end
 
     def start
-      logger.info(logloc) { "Starting signal handler with #{@signal_registry.length} hooks" }
+      @handler_install_mutex.synchronize do
+        logger.info(logloc) { "Starting signal handler with #{@signal_registry.length} hooks" }
 
-      @r, @w = IO.pipe
+        @r, @w = IO.pipe
 
-      install_signal_handlers
+        install_signal_handlers
+      end
 
       loop do
         begin
@@ -99,6 +105,7 @@ class ServiceSkeleton
                 break
               else
                 c = ios.first.first.read_nonblock(1)
+                logger.debug(logloc) { "Received character #{c.inspect} from signal pipe" }
                 handle_signal(c)
               end
             else
@@ -146,6 +153,7 @@ class ServiceSkeleton
     end
 
     def install_handler(sigspec, i)
+      logger.debug(logloc) { "Installing signal handler for #{sigspec[:signal]}" }
       chain = nil
 
       p = ->(*args) do
