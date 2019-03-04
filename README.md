@@ -263,9 +263,9 @@ class method in your service's class definition, like this:
 
       def run
         loop do
-	  puts config.something_funny
-	  sleep 1
-	end
+          puts config.something_funny
+          sleep 1
+        end
       end
     end
 
@@ -327,7 +327,7 @@ All are all-uppercase, and the `<SERVICENAME>_` portion is the all-uppercase
   override the default log level for messages with a specific progname, by
   specifying one or more "progname severities" separated by commas.  A progname
   severity looks like this:
-  
+
         <progname>=<severity>
 
   To make things even more fun, if `<progname>` looks like a regular expression
@@ -451,7 +451,7 @@ on `metrics`.  Thus, to increment our greeting counter, you can simply do:
 
         loop do
           puts "Hello, #{config.recipient}!"
-	  metrics.greetings_total.increment(recipient: config.recipient)
+          metrics.greetings_total.increment(recipient: config.recipient)
           sleep 1
         end
       end
@@ -470,7 +470,7 @@ before defining the metric accessor method, which keeps typing to a minimum:
 
         loop do
           puts "Hello, #{config.recipient}!"
-	  metrics.greetings_total.increment(recipient: config.recipient)
+          metrics.greetings_total.increment(recipient: config.recipient)
           sleep 1
         end
       end
