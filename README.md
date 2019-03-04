@@ -418,7 +418,7 @@ infinite loop.
 
 To register a metric, use one of the standard metric registration methods from
 [Prometheus::Client::Registry](https://www.rubydoc.info/gems/prometheus-client/0.8.0/Prometheus/Client/Registry)
-(`#counter`, `gauge`, `histogram`, `summary`, or `register`) on the `metrics`
+(`#counter`, `#gauge`, `#histogram`, `#summary`, or `#register`) on the `metrics`
 object to create or register the metric.
 
 In our generic greeter service we've been using as an example so far, you might
