@@ -75,6 +75,14 @@ class ServiceSkeleton
       end
     end
 
+    def path_list(var_name, default: UNDEFINED, sensitive: false)
+      register_variable(var_name, sensitive: sensitive) do |value|
+        maybe_default(value, default, var_name) do
+          value.split(":")
+        end
+      end
+    end
+
     private
 
     def maybe_default(value, default, var_name)

@@ -256,4 +256,51 @@ describe ServiceSkeleton::ConfigVariables do
       end
     end
   end
+
+  describe "path_list" do
+    let(:opts) { {} }
+    let(:var) { variable(:MY_PATH_LIST) }
+
+    before(:each) do
+      klass.path_list(:MY_PATH_LIST, **opts)
+    end
+
+    it "accepts a variable declaration and registers it" do
+      expect(klass.registered_variables).to match([instance_of(ServiceSkeleton::ConfigVariable)])
+    end
+
+    { "" => [], "/foo/bar" => ["/foo/bar"], "/x:/y" => ["/x", "/y"] }.each do |s, v|
+      it "returns an array for string #{s.inspect}" do
+        expect(var.value(s)).to eq(v)
+      end
+    end
+
+    it "raises an exception if no value given" do
+      expect { var.value(nil) }.to raise_error(ServiceSkeleton::Error::InvalidEnvironmentError)
+    end
+
+    context "with a default" do
+      let(:opts) { { default: [] } }
+
+      it "returns the default if no value given" do
+        expect(var.value(nil)).to eq([])
+      end
+
+      it "parses a value if one is given" do
+        expect(var.value("/xyzzy")).to eq(["/xyzzy"])
+      end
+    end
+
+    context "with a sensitive variable" do
+      let(:opts) { { sensitive: true } }
+
+      it "adds the variable to the list" do
+        expect(klass.registered_variables).to match([instance_of(ServiceSkeleton::ConfigVariable)])
+      end
+
+      it "marks the variable as sensitive" do
+        expect(klass.registered_variables.first.sensitive?).to eq(true)
+      end
+    end
+  end
 end
