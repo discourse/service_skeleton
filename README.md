@@ -146,7 +146,7 @@ that way you can get coerced values (numbers and booleans, rather than strings
 everywhere), range and format checking (say "the number must be between one and
 ten", or "the string must match this regex"), default values, and error
 reporting.  You also get direct access to the configuration value as a method
-call on the `@config` object.
+call on the `config` object.
 
 To declare configuration variables, simply call one of the "config declaration
 methods" (as listed in the `ServiceSkeleton::ConfigVariables` module) in your
