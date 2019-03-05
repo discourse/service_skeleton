@@ -112,6 +112,9 @@ class ServiceSkeleton
               logger.error(logloc) { "Mysterious return from select: #{ios.inspect}" }
             end
           end
+        rescue IOError
+          # Something has gone terribly wrong here... bail
+          break
         rescue StandardError => ex
           log_exception(ex) { "Exception in select loop" }
         end
