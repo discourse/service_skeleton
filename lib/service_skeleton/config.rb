@@ -30,6 +30,10 @@ class ServiceSkeleton
           val
         end
 
+        define_singleton_method(var.method_name(@svc.service_name) + "=") do |v|
+          val = v
+        end
+
         if var.sensitive?
           if env.object_id != ENV.object_id
             raise ServiceSkeleton::Error::CannotSanitizeEnvironmentError,

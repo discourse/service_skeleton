@@ -153,6 +153,11 @@ describe ServiceSkeleton::Config do
       expect(config.xyzzy).to eq(42)
     end
 
+    it "defines a method which allows the variable value to change" do
+      expect { config.xyzzy = 31337 }.to_not raise_error
+      expect(config.xyzzy).to eq(31337)
+    end
+
     it "defines a method without the service name prefix which returns the variable's value" do
       expect(config.var).to eq("ohai!")
     end
