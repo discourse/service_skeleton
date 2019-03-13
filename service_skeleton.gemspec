@@ -28,7 +28,7 @@ Gem::Specification.new do |s|
 
   s.files = `git ls-files -z`.split("\0").reject { |f| f =~ /^(G|spec|Rakefile)/ }
 
-  s.required_ruby_version = ">= 2.3.0"
+  s.required_ruby_version = ">= 2.5.0"
 
   s.add_runtime_dependency "frankenstein", "~> 1.2"
   s.add_runtime_dependency "loggerstash", "~> 0.0"

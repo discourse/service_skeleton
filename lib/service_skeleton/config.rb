@@ -24,7 +24,8 @@ class ServiceSkeleton
 
     def parse_registered_variables(env)
       @svc.registered_variables.each do |var|
-        val = var.value(env[var.name.to_s])
+        val = var.value(env)
+
         define_singleton_method(var.method_name(@svc.service_name)) do
           val
         end
@@ -34,7 +35,10 @@ class ServiceSkeleton
             raise ServiceSkeleton::Error::CannotSanitizeEnvironmentError,
                   "Attempted to sanitize sensitive variable #{var.name}, but was not passed the ENV object"
           end
-          env[var.name.to_s] = "*SENSITIVE*"
+
+          var.env_keys(env).each do |k|
+            env[k] = "*SENSITIVE*"
+          end
         end
       end
     end

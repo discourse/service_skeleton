@@ -83,10 +83,21 @@ class ServiceSkeleton
       end
     end
 
+    def kv_list(var_name, default: UNDEFINED, sensitive: false, key_pattern: nil)
+      key_pattern ||= /\A#{var_name}_(.*)\z/
+      register_variable(var_name, sensitive: sensitive, key_pattern: key_pattern) do |matches|
+        maybe_default(matches, default, var_name) do
+          matches.transform_keys do |k|
+            key_pattern.match(k)[1].to_sym
+          end
+        end
+      end
+    end
+
     private
 
     def maybe_default(value, default, var_name)
-      if value.nil?
+      if value.nil? || value == {}
         if default == UNDEFINED
           raise ServiceSkeleton::Error::InvalidEnvironmentError,
                 "Value for required environment variable #{var_name} not specified"

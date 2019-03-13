@@ -129,7 +129,6 @@ class ServiceSkeleton
 
     @metrics.singleton_class.prepend(ServiceSkeleton::MetricsMethods)
     @metrics.service = self
-
   end
 
   def start_metrics_server

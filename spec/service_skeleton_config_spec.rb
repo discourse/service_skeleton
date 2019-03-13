@@ -162,20 +162,28 @@ describe ServiceSkeleton::Config do
     let(:vars) do
       [
         ServiceSkeleton::ConfigVariable.new(:SEKRIT, sensitive: true) { "password1!" },
+        ServiceSkeleton::ConfigVariable.new(:SEKRIT_LIST, sensitive: true, key_pattern: /^LIST_/) { {} }
       ]
     end
 
-    it "redacts the variable from the ENV" do
+    it "redacts the variables from the ENV" do
       env = {
         "SEKRIT" => "x",
         "PUBLIC" => "y",
+        "LIST_X" => "xxx",
+        "LIST_Y" => "yyy",
       }
 
       with_overridden_constant Object, :ENV, env do
         ServiceSkeleton::Config.new(env, svc)
       end
 
-      expect(env).to eq("PUBLIC" => "y", "SEKRIT" => "*SENSITIVE*")
+      expect(env).to eq(
+        "PUBLIC" => "y",
+        "SEKRIT" => "*SENSITIVE*",
+        "LIST_X" => "*SENSITIVE*",
+        "LIST_Y" => "*SENSITIVE*",
+      )
     end
 
     it "freaks out if it doesn't have the real ENV" do
