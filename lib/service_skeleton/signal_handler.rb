@@ -81,6 +81,7 @@ class ServiceSkeleton
         else
           # If the background thread isn't running yet, the signal handler will
           # be installed when that is started.
+          logger.debug(logloc) { "Deferring installation of handler for #{sig} (#{handler_num})" }
         end
 
         @signal_registry << sigspec
