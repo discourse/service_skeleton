@@ -62,10 +62,20 @@ class ServiceSkeleton
         loggerstash.attach(@logger)
       end
 
-      if log_enable_timestamps
-        @logger.formatter = ->(s, t, p, m) { "#{t.utc.strftime("%FT%T.%NZ")} #{s[0]} [#{p}] #{m}\n" }
+      thread_id_map = {}
+      if Thread.main
+        thread_id_map[Thread.main.object_id] = 0
       else
-        @logger.formatter = ->(s, t, p, m) { "#{s[0]} [#{p}] #{m}\n" }
+        #:nocov:
+        thread_id_map[Thread.current.object_id] = 0
+        #:nocov:
+      end
+
+      @logger.formatter = ->(s, t, p, m) do
+        th_n = thread_id_map[Thread.current.object_id] || (thread_id_map[Thread.current.object_id] = thread_id_map.length)
+
+        ts = log_enable_timestamps ? "#{t.utc.strftime("%FT%T.%NZ")} " : ""
+        "#{ts}##{th_n} #{s[0]} [#{p}] #{m}\n"
       end
 
       @logger.filters = []
