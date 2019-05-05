@@ -61,12 +61,15 @@ class ServiceSkeleton
         logger.debug("BackgroundWorker(#{self.class})#stop!") { "Terminating worker thread #{@bg_worker_thread.object_id} as requested" }
 
         if force == :force
+          logger.debug(logloc) { "Forcing termination" }
           @bg_worker_thread.raise(TerminateBackgroundThread)
         else
+          logger.debug(logloc) { "Gracefully terminating worker thread" }
           shutdown
         end
 
         begin
+          logger.debug(logloc) { "Waiting for worker thread #{@bg_worker_thread.object_id} to finish itself off" }
           @bg_worker_thread.join unless @bg_worker_thread == Thread.current
         rescue TerminateBackgroundThread
           nil
@@ -74,7 +77,7 @@ class ServiceSkeleton
 
         @bg_worker_thread = nil
 
-        logger.debug("BackgroundWorker(#{self.class})#stop!") { "Worker thread terminated" }
+        logger.debug("BackgroundWorker(#{self.class})#stop!") { "Worker thread #{@bg_worker_thread.object_id} terminated" }
       end
     end
 
@@ -83,6 +86,7 @@ class ServiceSkeleton
     attr_reader :logger
 
     def shutdown
+      logger.debug("BackgroundWorker(#{self.class})#stop!") { "Using default shutdown method" }
       @bg_worker_thread.raise(TerminateBackgroundThread)
     end
   end
