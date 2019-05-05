@@ -75,7 +75,7 @@ class ServiceSkeleton
         th_n = thread_id_map[Thread.current.object_id] || (thread_id_map[Thread.current.object_id] = thread_id_map.length)
 
         ts = log_enable_timestamps ? "#{t.utc.strftime("%FT%T.%NZ")} " : ""
-        "#{ts}##{th_n} #{s[0]} [#{p}] #{m}\n"
+        "#{ts}#{$$}##{th_n} #{s[0]} [#{p}] #{m}\n"
       end
 
       @logger.filters = []

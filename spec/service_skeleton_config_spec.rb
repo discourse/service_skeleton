@@ -28,12 +28,12 @@ describe ServiceSkeleton::Config do
 
     it "formats messages sanely" do
       expect(config.logger.formatter.call("WARN", Time.now, "Spec", "ohai!"))
-        .to eq("#0 W [Spec] ohai!\n")
+        .to match(/\A\d+#0 W \[Spec\] ohai!\n\z/)
     end
 
     it "includes a thread number" do
       expect(Thread.new { config.logger.formatter.call("WARN", Time.now, "Spec", "ohai!") }.value)
-        .to eq("#1 W [Spec] ohai!\n")
+        .to match(/\A\d+#1 W \[Spec\] ohai!\n\z/)
     end
 
     it "doesn't configure Loggerstash by default" do
@@ -93,7 +93,7 @@ describe ServiceSkeleton::Config do
 
       it "formats the log entries with a timestamp" do
         expect(config.logger.formatter.call("INFO", Time.strptime("1234567890.987654321", "%s.%N"), "Stamped", "ohai!"))
-          .to eq("2009-02-13T23:31:30.987654321Z #0 I [Stamped] ohai!\n")
+          .to match(/\A2009-02-13T23:31:30.987654321Z \d+#0 I \[Stamped\] ohai!\n\z/)
       end
     end
 
