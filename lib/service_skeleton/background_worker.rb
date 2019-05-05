@@ -87,7 +87,7 @@ class ServiceSkeleton
 
     def shutdown
       logger.debug("BackgroundWorker(#{self.class})#stop!") { "Using default shutdown method" }
-      @bg_worker_thread.raise(TerminateBackgroundThread)
+      @bg_worker_thread.raise(TerminateBackgroundThread) if @bg_worker_thread
     end
   end
 end
