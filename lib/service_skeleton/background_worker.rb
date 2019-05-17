@@ -48,6 +48,7 @@ class ServiceSkeleton
               logger.debug("BackgroundWorker(#{self.class})#start!") { "Background worker thread #{Thread.current.object_id} terminating" }
             end
           end
+          logger.debug("BackgroundWorker(#{self.class})#start!") { "Background worker thread #{Thread.current.object_id} is now done" }
         end
 
         @bg_worker_op_cv.wait(@bg_worker_op_mutex) until @bg_worker_thread

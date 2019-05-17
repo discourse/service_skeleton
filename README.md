@@ -75,6 +75,8 @@ Whatever it is, `ServiceSkeleton` doesn't discriminate.  All you have to do is
 write it in your subclass' `#run` method, and `ServiceSkeleton` will take care
 of the rest.
 
+If your `#run` method exits, the service will terminate.
+
 
 ### STAHP!
 
