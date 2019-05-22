@@ -13,8 +13,10 @@ describe ServiceSkeleton do
   let(:mock_signal_handler) { instance_double(ServiceSkeleton::SignalHandler) }
 
   before(:each) do
+    allow(ServiceSkeleton::SignalHandler).to receive(:new).and_return(mock_signal_handler)
     allow(mock_signal_handler).to receive(:hook_signal)
     allow(mock_signal_handler).to receive(:start!)
+    allow(mock_signal_handler).to receive(:stop!)
   end
 
   it "can be sub-classed" do
@@ -149,6 +151,11 @@ describe ServiceSkeleton do
   end
 
   describe "signal handler" do
+    before(:each) do
+      # Override the default stubbing of the signal handler
+      allow(ServiceSkeleton::SignalHandler).to receive(:new).and_call_original
+    end
+
     def call_signal_handler(sig)
       svc
         .instance_variable_get(:@signal_handler)
@@ -213,6 +220,11 @@ describe ServiceSkeleton do
   end
 
   describe "#hook_signal" do
+    before(:each) do
+      # Override the default stubbing of the signal handler
+      allow(ServiceSkeleton::SignalHandler).to receive(:new).and_call_original
+    end
+
     it "adds a spec to the signal registry" do
       tripped = false
 
