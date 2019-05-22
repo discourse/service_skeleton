@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class ServiceSkeleton
   module BackgroundWorker
     include ServiceSkeleton::LoggingHelpers

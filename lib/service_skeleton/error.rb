@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class ServiceSkeleton
   class Error < StandardError
     class InvalidEnvironmentError < Error; end

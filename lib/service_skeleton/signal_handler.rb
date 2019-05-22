@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative "./background_worker"
 require_relative "./logging_helpers"
 

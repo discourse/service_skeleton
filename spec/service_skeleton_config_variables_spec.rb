@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative "./spec_helper"
 
 require "service_skeleton/config_variables"
@@ -322,8 +324,8 @@ describe ServiceSkeleton::ConfigVariables do
 
     it "picks out relevant records" do
       expect(var.value(
-        "FOO"            => "bar",
-        "MY_KV_LIST_x"   => "y",
+        "FOO" => "bar",
+        "MY_KV_LIST_x" => "y",
         "MY_KV_LIST_baz" => "wombat",
       )).to eq(x: "y", baz: "wombat")
     end

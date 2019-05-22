@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "to_regexp"
 
 require_relative "./filtering_logger"

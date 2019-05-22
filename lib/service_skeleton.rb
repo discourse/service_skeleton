@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative "service_skeleton/config"
 require_relative "service_skeleton/config_variables"
 require_relative "service_skeleton/logging_helpers"

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class ServiceSkeleton
   class ConfigVariable
     attr_reader :name, :key_pattern
