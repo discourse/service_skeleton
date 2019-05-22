@@ -43,7 +43,7 @@ class ServiceSkeleton
           end
 
           var.env_keys(env).each do |k|
-            env[k] = "*SENSITIVE*"
+            env[k] = var.redacted_value
           end
         end
       end

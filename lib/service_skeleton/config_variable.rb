@@ -18,6 +18,10 @@ class ServiceSkeleton
       !!@opts[:sensitive]
     end
 
+    def redacted_value
+      "*SENSITIVE*"
+    end
+
     def value(env)
       if @opts[:key_pattern]
         matches = env.select { |k, _| @opts[:key_pattern] === k.to_s }
