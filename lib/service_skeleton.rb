@@ -186,22 +186,22 @@ class ServiceSkeleton
   end
 
   @registered_variables = [
-    ServiceSkeleton::ConfigVariable.new(:SERVICE_SKELETON_LOG_LEVEL) { "INFO" },
-    ServiceSkeleton::ConfigVariable.new(:SERVICE_SKELETON_LOGSTASH_SERVER) { "" },
-    ServiceSkeleton::ConfigVariable.new(:SERVICE_SKELETON_LOG_ENABLE_TIMESTAMPS) { false },
-    ServiceSkeleton::ConfigVariable.new(:SERVICE_SKELETON_LOG_FILE) { nil },
-    ServiceSkeleton::ConfigVariable.new(:SERVICE_SKELETON_LOG_MAX_FILE_SIZE) { 1048576 },
-    ServiceSkeleton::ConfigVariable.new(:SERVICE_SKELETON_LOG_MAX_FILES) { 3 },
-    ServiceSkeleton::ConfigVariable.new(:SERVICE_SKELETON_METRICS_PORT) { nil },
+    { name: :SERVICE_SKELETON_LOG_LEVEL,             class: ConfigVariable::String,  opts: { default: "INFO" } },
+    { name: :SERVICE_SKELETON_LOG_ENABLE_TIMESTAMPS, class: ConfigVariable::Boolean, opts: { default: false } },
+    { name: :SERVICE_SKELETON_LOG_FILE,              class: ConfigVariable::String,  opts: { default: nil } },
+    { name: :SERVICE_SKELETON_LOG_MAX_FILE_SIZE,     class: ConfigVariable::Integer, opts: { default: 1048576, range: 0..Float::INFINITY } },
+    { name: :SERVICE_SKELETON_LOG_MAX_FILES,         class: ConfigVariable::Integer, opts: { default: 3, range: 0..Float::INFINITY } },
+    { name: :SERVICE_SKELETON_LOGSTASH_SERVER,       class: ConfigVariable::String,  opts: { default: nil } },
+    { name: :SERVICE_SKELETON_METRICS_PORT,          class: ConfigVariable::Integer, opts: { default: nil, range: 1..65535 } },
   ]
 
   def self.inherited(subclass)
     subclass.string(:"#{subclass.service_name.upcase}_LOG_LEVEL", default: "INFO")
-    subclass.string(:"#{subclass.service_name.upcase}_LOGSTASH_SERVER", default: "")
     subclass.boolean(:"#{subclass.service_name.upcase}_LOG_ENABLE_TIMESTAMPS", default: false)
     subclass.string(:"#{subclass.service_name.upcase}_LOG_FILE", default: nil)
     subclass.integer(:"#{subclass.service_name.upcase}_LOG_MAX_FILE_SIZE", default: 1048576, range: 0..Float::INFINITY)
     subclass.integer(:"#{subclass.service_name.upcase}_LOG_MAX_FILES", default: 3, range: 1..Float::INFINITY)
+    subclass.string(:"#{subclass.service_name.upcase}_LOGSTASH_SERVER", default: "")
     subclass.integer(:"#{subclass.service_name.upcase}_METRICS_PORT", default: nil, range: 1..65535)
   end
 end

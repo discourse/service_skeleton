@@ -151,8 +151,8 @@ describe ServiceSkeleton::Config do
   context "with defined variables" do
     let(:vars) do
       [
-        ServiceSkeleton::ConfigVariable.new(:XYZZY) { 42 },
-        ServiceSkeleton::ConfigVariable.new(:SPEC_SERVICE_VAR) { "ohai!" },
+        { name: :XYZZY,            class: ServiceSkeleton::ConfigVariable::Integer, opts: { default: 42 } },
+        { name: :SPEC_SERVICE_VAR, class: ServiceSkeleton::ConfigVariable::String,  opts: { default: "ohai!" } },
       ]
     end
 
@@ -173,8 +173,7 @@ describe ServiceSkeleton::Config do
   context "with sensitive variables" do
     let(:vars) do
       [
-        ServiceSkeleton::ConfigVariable.new(:SEKRIT, sensitive: true) { "password1!" },
-        ServiceSkeleton::ConfigVariable.new(:SEKRIT_LIST, sensitive: true, key_pattern: /^LIST_/) { {} }
+        { name: :SEKRIT, class: ServiceSkeleton::ConfigVariable::String, opts: { sensitive: true } },
       ]
     end
 
@@ -182,24 +181,17 @@ describe ServiceSkeleton::Config do
       env = {
         "SEKRIT" => "x",
         "PUBLIC" => "y",
-        "LIST_X" => "xxx",
-        "LIST_Y" => "yyy",
       }
 
       with_overridden_constant Object, :ENV, env do
         ServiceSkeleton::Config.new(env, svc)
-      end
 
-      expect(env).to eq(
-        "PUBLIC" => "y",
-        "SEKRIT" => "*SENSITIVE*",
-        "LIST_X" => "*SENSITIVE*",
-        "LIST_Y" => "*SENSITIVE*",
-      )
+        expect(env).to eq("SEKRIT" => "*SENSITIVE*", "PUBLIC" => "y")
+      end
     end
 
     it "freaks out if it doesn't have the real ENV" do
-      expect { ServiceSkeleton::Config.new({}, svc) }.to raise_error(ServiceSkeleton::Error::CannotSanitizeEnvironmentError)
+      expect { ServiceSkeleton::Config.new({ "SEKRIT" => "x" }, svc) }.to raise_error(ServiceSkeleton::Error::CannotSanitizeEnvironmentError)
     end
   end
 end

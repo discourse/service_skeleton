@@ -7,353 +7,513 @@ require "service_skeleton/config_variables"
 describe ServiceSkeleton::ConfigVariables do
   let(:klass) { Class.new.extend(ServiceSkeleton::ConfigVariables) }
 
-  def variable(var)
-    klass
+  def variable(env)
+    rego = klass
       .registered_variables
-      .find { |r| r.name == var }
+      .find { |r| r[:name] == var_name }
+    rego[:class].new(rego[:name], env, **rego[:opts])
   end
 
   describe "#register_variable" do
-    it "inserts the variable registration into the variable registry" do
-      klass.register_variable(:XYZZY) { |v| nil }
+    it "inserts a simple variable registration into the variable registry" do
+      klass.register_variable(:XYZZY, ServiceSkeleton::ConfigVariable::String)
 
-      expect(klass.registered_variables).to match([instance_of(ServiceSkeleton::ConfigVariable)])
+      expect(klass.registered_variables).to eq([name: :XYZZY, class: ServiceSkeleton::ConfigVariable::String, opts: {}])
+    end
+
+    it "inserts a default-value variable registration into the variable registry" do
+      klass.register_variable(:XYZZY, ServiceSkeleton::ConfigVariable::String, default: "42")
+
+      expect(klass.registered_variables).to eq([name: :XYZZY, class: ServiceSkeleton::ConfigVariable::String, opts: { default: "42" }])
+    end
+
+    it "inserts an arbitrary-opts variable registration into the variable registry" do
+      klass.register_variable(:XYZZY, ServiceSkeleton::ConfigVariable::String, something: "funny")
+
+      expect(klass.registered_variables).to eq([name: :XYZZY, class: ServiceSkeleton::ConfigVariable::String, opts: { something: "funny" }])
     end
   end
 
   describe "#string" do
-    let(:opts) { {} }
-    let(:var) { variable(:MY_STRING) }
-
-    before(:each) do
-      klass.string(:MY_STRING, **opts)
-    end
+    let(:var_name) { :MY_STRING }
 
     it "accepts a variable declaration and registers it" do
-      expect(klass.registered_variables).to match([instance_of(ServiceSkeleton::ConfigVariable)])
+      klass.string(var_name)
+      expect(klass.registered_variables).to eq([{ name: :MY_STRING, class: ServiceSkeleton::ConfigVariable::String, opts: { sensitive: false } }])
     end
 
-    it "accepts a string" do
-      expect(var.value("MY_STRING" => "ohai!")).to eq("ohai!")
-    end
-
-    it "raises an exception if no value given" do
-      expect { var.value("FOO" => "bar") }.to raise_error(ServiceSkeleton::Error::InvalidEnvironmentError)
-    end
-
-    context "with a default" do
-      let(:opts) { { default: "lolrus" } }
-
-      it "returns the default if no value given" do
-        expect(var.value("FOO" => "bar")).to eq("lolrus")
+    describe "variable object" do
+      before(:each) do
+        klass.string(var_name, **opts)
       end
 
-      it "returns the value given if given one" do
-        expect(var.value("MY_STRING" => "hi there")).to eq("hi there")
+      context "with no specified opts" do
+        let(:opts) { {} }
+
+        it "accepts a string" do
+          expect(variable("MY_STRING" => "ohai!").value).to eq("ohai!")
+        end
+
+        it "raises an exception during initialization if no value given" do
+          expect { variable("FOO" => "bar") }.to raise_error(ServiceSkeleton::Error::InvalidEnvironmentError)
+        end
+
+        it "does not redact" do
+          env = { "FOO" => "bar", "MY_STRING" => "ohai!" }
+
+          with_overridden_constant Object, :ENV, env do
+            expect { variable(env).redact!(env) }.to_not raise_error
+            expect(env).to eq("FOO" => "bar", "MY_STRING" => "ohai!")
+          end
+        end
       end
-    end
 
-    context "with a sensitive variable" do
-      let(:opts) { { sensitive: true } }
+      context "with a default" do
+        let(:opts) { { default: "lolrus" } }
 
-      it "adds the variable to the list" do
-        expect(klass.registered_variables).to match([instance_of(ServiceSkeleton::ConfigVariable)])
+        it "returns the default if no value given" do
+          expect(variable("FOO" => "bar").value).to eq("lolrus")
+        end
+
+        it "returns the value given if given one" do
+          expect(variable("MY_STRING" => "hi there").value).to eq("hi there")
+        end
       end
 
-      it "marks the variable as sensitive" do
-        expect(klass.registered_variables.first.sensitive?).to eq(true)
+      context "with a sensitive variable" do
+        let(:opts) { { sensitive: true } }
+
+        it "redacts the variable value" do
+          env = { "FOO" => "bar", "MY_STRING" => "s3kr1t" }
+
+          with_overridden_constant Object, :ENV, env do
+            expect { variable(env).redact!(env) }.to_not raise_error
+            expect(env).to eq("FOO" => "bar", "MY_STRING" => "*SENSITIVE*")
+          end
+        end
+
+        context "and a default" do
+          let(:opts) { { sensitive: true, default: "hey" } }
+
+          it "does not add the variable to the environment" do
+            env = { "FOO" => "bar" }
+
+            with_overridden_constant Object, :ENV, env do
+              expect { variable(env).redact!(env) }.to_not raise_error
+              expect(env).to eq("FOO" => "bar")
+            end
+          end
+        end
       end
     end
   end
 
   describe "#boolean" do
-    let(:opts) { {} }
-    let(:var) { variable(:MY_BOOL) }
-
-    before(:each) do
-      klass.boolean(:MY_BOOL, **opts)
-    end
+    let(:var_name) { :MY_BOOL }
 
     it "accepts a variable declaration and registers it" do
-      expect(klass.registered_variables).to match([instance_of(ServiceSkeleton::ConfigVariable)])
+      klass.boolean(var_name)
+      expect(klass.registered_variables).to eq([{ name: :MY_BOOL, class: ServiceSkeleton::ConfigVariable::Boolean, opts: { sensitive: false } }])
     end
 
-    %w{yes YeS y on oN 1 TRUE true}.each do |s|
-      it "returns true for true-ish string #{s.inspect}" do
-        expect(var.value("MY_BOOL" => s)).to eq(true)
-      end
-    end
-
-    %w{no No n off oFf 0 false FaLsE}.each do |s|
-      it "returns false for false-ish string #{s.inspect}" do
-        expect(var.value("MY_BOOL" => s)).to eq(false)
-      end
-    end
-
-    %w{foo bar LOUD NOISES baz wombat 42}.each do |s|
-      it "raises an exception when given non-boolean string #{s.inspect}" do
-        expect { var.value("MY_BOOL" => s) }.to raise_error(ServiceSkeleton::Error::InvalidEnvironmentError)
-      end
-    end
-
-    it "raises an exception if no value given" do
-      expect { var.value("FOO" => "bar") }.to raise_error(ServiceSkeleton::Error::InvalidEnvironmentError)
-    end
-
-    context "with a default" do
-      let(:opts) { { default: true } }
-
-      it "returns the default if no value given" do
-        expect(var.value("FOO" => "bar")).to eq(true)
+    describe "variable object" do
+      before(:each) do
+        klass.boolean(var_name, **opts)
       end
 
-      it "parses a value if one is given" do
-        expect(var.value("true")).to eq(true)
+      context "with no specified opts" do
+        let(:opts) { {} }
+
+        %w{yes YeS y on oN 1 TRUE true}.each do |s|
+          it "returns true for true-ish string #{s.inspect}" do
+            expect(variable("MY_BOOL" => s).value).to eq(true)
+          end
+        end
+
+        %w{no No n off oFf 0 false FaLsE}.each do |s|
+          it "returns false for false-ish string #{s.inspect}" do
+            expect(variable("MY_BOOL" => s).value).to eq(false)
+          end
+        end
+
+        %w{foo bar LOUD NOISES baz wombat 42}.each do |s|
+          it "raises an exception when given non-boolean string #{s.inspect}" do
+            expect { variable("MY_BOOL" => s) }.to raise_error(ServiceSkeleton::Error::InvalidEnvironmentError)
+          end
+        end
+
+        it "raises an exception if no value given" do
+          expect { variable("FOO" => "bar") }.to raise_error(ServiceSkeleton::Error::InvalidEnvironmentError)
+        end
+
+        it "does not redact" do
+          env = { "FOO" => "bar", "MY_BOOL" => "yes" }
+
+          with_overridden_constant Object, :ENV, env do
+            expect { variable(env).redact!(env) }.to_not raise_error
+            expect(env).to eq("FOO" => "bar", "MY_BOOL" => "yes")
+          end
+        end
       end
-    end
 
-    context "with a sensitive variable" do
-      let(:opts) { { sensitive: true } }
+      context "with a default" do
+        let(:opts) { { default: true } }
 
-      it "adds the variable to the list" do
-        expect(klass.registered_variables).to match([instance_of(ServiceSkeleton::ConfigVariable)])
+        it "returns the default if no value given" do
+          expect(variable("FOO" => "bar").value).to eq(true)
+        end
+
+        it "parses a value if one is given" do
+          expect(variable("MY_BOOL" => "true").value).to eq(true)
+        end
       end
 
-      it "marks the variable as sensitive" do
-        expect(klass.registered_variables.first.sensitive?).to eq(true)
+      context "with a sensitive variable" do
+        let(:opts) { { sensitive: true } }
+
+        it "redacts the variable value" do
+          env = { "FOO" => "bar", "MY_BOOL" => "true" }
+
+          with_overridden_constant Object, :ENV, env do
+            expect { variable(env).redact!(env) }.to_not raise_error
+            expect(env).to eq("FOO" => "bar", "MY_BOOL" => "*SENSITIVE*")
+          end
+        end
+
+        context "and a default" do
+          let(:opts) { { sensitive: true, default: true } }
+
+          it "does not add the variable to the environment" do
+            env = { "FOO" => "bar" }
+
+            with_overridden_constant Object, :ENV, env do
+              expect { variable(env).redact!(env) }.to_not raise_error
+              expect(env).to eq("FOO" => "bar")
+            end
+          end
+        end
       end
     end
   end
 
   describe "#integer" do
     let(:opts) { {} }
-    let(:var) { variable(:MY_INT) }
-
-    before(:each) do
-      klass.integer(:MY_INT, **opts)
-    end
+    let(:var_name) { :MY_INT }
 
     it "accepts a variable declaration and registers it" do
-      expect(klass.registered_variables).to match([instance_of(ServiceSkeleton::ConfigVariable)])
+      klass.integer(var_name)
+      expect(klass.registered_variables).to eq([{ name: :MY_INT, class: ServiceSkeleton::ConfigVariable::Integer, opts: { sensitive: false, range: -Float::INFINITY..Float::INFINITY } }])
     end
 
-    { "0" => 0, "1" => 1, "1000" => 1000, "-42" => -42 }.each do |s, i|
-      it "returns an integer for string #{s.inspect}" do
-        expect(var.value("MY_INT" => s)).to eq(i)
-      end
-    end
-
-    %w{zero one ohai! 3.14159625}.each do |s|
-      it "raises an exception for non-integer string #{s.inspect}" do
-        expect { var.value("MY_INT" => s) }.to raise_error(ServiceSkeleton::Error::InvalidEnvironmentError)
-      end
-    end
-
-    it "raises an exception if no value given" do
-      expect { var.value("FOO" => "bar") }.to raise_error(ServiceSkeleton::Error::InvalidEnvironmentError)
-    end
-
-    context "with a default" do
-      let(:opts) { { default: 71 } }
-
-      it "returns the default if no value given" do
-        expect(var.value("FOO" => "bar")).to eq(71)
+    describe "variable object" do
+      before(:each) do
+        klass.integer(:MY_INT, **opts)
       end
 
-      it "parses a value if one is given" do
-        expect(var.value("MY_INT" => "42")).to eq(42)
-      end
-    end
+      context "with no specified opts" do
+        let(:opts) { {} }
 
-    context "with a validity range" do
-      let(:opts) { { range: 0..Float::INFINITY } }
+        { "0" => 0, "1" => 1, "1000" => 1000, "-42" => -42 }.each do |s, i|
+          it "returns an integer for string #{s.inspect}" do
+            expect(variable("MY_INT" => s).value).to eq(i)
+          end
+        end
 
-      { "0" => 0, "1" => 1, "1000" => 1000 }.each do |s, i|
-        it "returns an integer for valid string #{s.inspect}" do
-          expect(var.value("MY_INT" => s)).to eq(i)
+        %w{zero one ohai! 3.14159625}.each do |s|
+          it "raises an exception for non-integer string #{s.inspect}" do
+            expect { variable("MY_INT" => s) }.to raise_error(ServiceSkeleton::Error::InvalidEnvironmentError)
+          end
+        end
+
+        it "raises an exception if no value given" do
+          expect { variable("FOO" => "bar") }.to raise_error(ServiceSkeleton::Error::InvalidEnvironmentError)
+        end
+
+        it "does not redact" do
+          env = { "FOO" => "bar", "MY_INT" => "42" }
+
+          with_overridden_constant Object, :ENV, env do
+            expect { variable(env).redact!(env) }.to_not raise_error
+            expect(env).to eq("FOO" => "bar", "MY_INT" => "42")
+          end
         end
       end
 
-      it "raises an exception for integers which are out-of-range" do
-        expect { var.value("MY_INT" => "-42") }.to raise_error(ServiceSkeleton::Error::InvalidEnvironmentError)
+      context "with a default" do
+        let(:opts) { { default: 71 } }
+
+        it "returns the default if no value given" do
+          expect(variable("FOO" => "bar").value).to eq(71)
+        end
+
+        it "parses a value if one is given" do
+          expect(variable("MY_INT" => "42").value).to eq(42)
+        end
       end
-    end
 
-    context "with a sensitive variable" do
-      let(:opts) { { sensitive: true } }
+      context "with a validity range" do
+        let(:opts) { { range: 0..Float::INFINITY } }
 
-      it "adds the variable to the list" do
-        expect(klass.registered_variables).to match([instance_of(ServiceSkeleton::ConfigVariable)])
+        { "0" => 0, "1" => 1, "1000" => 1000 }.each do |s, i|
+          it "returns an integer for valid string #{s.inspect}" do
+            expect(variable("MY_INT" => s).value).to eq(i)
+          end
+        end
+
+        it "raises an exception for integers which are out-of-range" do
+          expect { variable("MY_INT" => "-42") }.to raise_error(ServiceSkeleton::Error::InvalidEnvironmentError)
+        end
       end
 
-      it "marks the variable as sensitive" do
-        expect(klass.registered_variables.first.sensitive?).to eq(true)
+      context "with a sensitive variable" do
+        let(:opts) { { sensitive: true } }
+
+        it "redacts the variable value" do
+          env = { "FOO" => "bar", "MY_INT" => "42" }
+
+          with_overridden_constant Object, :ENV, env do
+            expect { variable(env).redact!(env) }.to_not raise_error
+            expect(env).to eq("FOO" => "bar", "MY_INT" => "*SENSITIVE*")
+          end
+        end
+
+        context "and a default" do
+          let(:opts) { { sensitive: true, default: true } }
+
+          it "does not add the variable to the environment" do
+            env = { "FOO" => "bar" }
+
+            with_overridden_constant Object, :ENV, env do
+              expect { variable(env).redact!(env) }.to_not raise_error
+              expect(env).to eq("FOO" => "bar")
+            end
+          end
+        end
       end
     end
   end
 
   describe "#float" do
-    let(:opts) { {} }
-    let(:var) { variable(:MY_FLOAT) }
-
-    before(:each) do
-      klass.float(:MY_FLOAT, **opts)
-    end
+    let(:var_name) { :MY_FLOAT }
 
     it "accepts a variable declaration and registers it" do
-      expect(klass.registered_variables).to match([instance_of(ServiceSkeleton::ConfigVariable)])
+      klass.float(var_name)
+      expect(klass.registered_variables).to eq([{ name: :MY_FLOAT, class: ServiceSkeleton::ConfigVariable::Float, opts: { sensitive: false, range: -Float::INFINITY..Float::INFINITY } }])
     end
 
-    { "0" => 0, "1" => 1, "3.14159" => 3.14159, "-1.2345" => -1.2345 }.each do |s, f|
-      it "returns a float for string #{s.inspect}" do
-        expect(var.value("MY_FLOAT" => s)).to be_within(0.000001).of(f)
-      end
-    end
-
-    %w{zero one pi ohai!}.each do |s|
-      it "raises an exception for non-float string #{s.inspect}" do
-        expect { var.value("MY_FLOAT" => s) }.to raise_error(ServiceSkeleton::Error::InvalidEnvironmentError)
-      end
-    end
-
-    it "raises an exception if no value given" do
-      expect { var.value("FOO" => "bar") }.to raise_error(ServiceSkeleton::Error::InvalidEnvironmentError)
-    end
-
-    context "with a default" do
-      let(:opts) { { default: 1.41421356 } }
-
-      it "returns the default if no value given" do
-        expect(var.value("FOO" => "bar")).to be_within(0.0000001).of(1.41421356)
+    describe "variable object" do
+      before(:each) do
+        klass.float(:MY_FLOAT, **opts)
       end
 
-      it "parses a value if one is given" do
-        expect(var.value("MY_FLOAT" => "3.14159")).to be_within(0.0000001).of(3.14159)
-      end
-    end
+      context "with no specified opts" do
+        let(:opts) { {} }
 
-    context "with a validity range" do
-      let(:opts) { { range: 0..Float::INFINITY } }
+        { "0" => 0, "1" => 1, "3.14159" => 3.14159, "-1.2345" => -1.2345 }.each do |s, f|
+          it "returns a float for string #{s.inspect}" do
+            expect(variable("MY_FLOAT" => s).value).to be_within(0.000001).of(f)
+          end
+        end
 
-      { "0" => 0, "1" => 1, "3.14159" => 3.14159 }.each do |s, i|
-        it "returns a float for valid string #{s.inspect}" do
-          expect(var.value("MY_FLOAT" => s)).to eq(i)
+        %w{zero one pi ohai!}.each do |s|
+          it "raises an exception for non-float string #{s.inspect}" do
+            expect { variable("MY_FLOAT" => s) }.to raise_error(ServiceSkeleton::Error::InvalidEnvironmentError)
+          end
+        end
+
+        it "raises an exception if no value given" do
+          expect { variable("FOO" => "bar") }.to raise_error(ServiceSkeleton::Error::InvalidEnvironmentError)
         end
       end
 
-      it "raises an exception for floats which are out-of-range" do
-        expect { var.value("MY_FLOAT" => "-1.41421356") }.to raise_error(ServiceSkeleton::Error::InvalidEnvironmentError)
+      context "with a default" do
+        let(:opts) { { default: 1.41421356 } }
+
+        it "returns the default if no value given" do
+          expect(variable("FOO" => "bar").value).to be_within(0.0000001).of(1.41421356)
+        end
+
+        it "parses a value if one is given" do
+          expect(variable("MY_FLOAT" => "3.14159").value).to be_within(0.0000001).of(3.14159)
+        end
       end
-    end
 
-    context "with a sensitive variable" do
-      let(:opts) { { sensitive: true } }
+      context "with a validity range" do
+        let(:opts) { { range: 0..Float::INFINITY } }
 
-      it "adds the variable to the list" do
-        expect(klass.registered_variables).to match([instance_of(ServiceSkeleton::ConfigVariable)])
+        { "0" => 0, "1" => 1, "3.14159" => 3.14159 }.each do |s, i|
+          it "returns a float for valid string #{s.inspect}" do
+            expect(variable("MY_FLOAT" => s).value).to eq(i)
+          end
+        end
+
+        it "raises an exception for floats which are out-of-range" do
+          expect { variable("MY_FLOAT" => "-1.41421356") }.to raise_error(ServiceSkeleton::Error::InvalidEnvironmentError)
+        end
       end
 
-      it "marks the variable as sensitive" do
-        expect(klass.registered_variables.first.sensitive?).to eq(true)
+      context "with a sensitive variable" do
+        let(:opts) { { sensitive: true } }
+
+        it "redacts the variable value" do
+          env = { "FOO" => "bar", "MY_FLOAT" => "1.2345" }
+
+          with_overridden_constant Object, :ENV, env do
+            expect { variable(env).redact!(env) }.to_not raise_error
+            expect(env).to eq("FOO" => "bar", "MY_FLOAT" => "*SENSITIVE*")
+          end
+        end
+
+        context "and a default" do
+          let(:opts) { { sensitive: true, default: true } }
+
+          it "does not add the variable to the environment" do
+            env = { "FOO" => "bar" }
+
+            with_overridden_constant Object, :ENV, env do
+              expect { variable(env).redact!(env) }.to_not raise_error
+              expect(env).to eq("FOO" => "bar")
+            end
+          end
+        end
       end
     end
   end
 
   describe "path_list" do
-    let(:opts) { {} }
-    let(:var) { variable(:MY_PATH_LIST) }
-
-    before(:each) do
-      klass.path_list(:MY_PATH_LIST, **opts)
-    end
+    let(:var_name) { :MY_PATH_LIST }
 
     it "accepts a variable declaration and registers it" do
-      expect(klass.registered_variables).to match([instance_of(ServiceSkeleton::ConfigVariable)])
+      klass.path_list(var_name)
+      expect(klass.registered_variables).to eq([{ name: :MY_PATH_LIST, class: ServiceSkeleton::ConfigVariable::PathList, opts: { sensitive: false } }])
     end
 
-    { "" => [], "/foo/bar" => ["/foo/bar"], "/x:/y" => ["/x", "/y"] }.each do |s, v|
-      it "returns an array for string #{s.inspect}" do
-        expect(var.value("MY_PATH_LIST" => s)).to eq(v)
-      end
-    end
-
-    it "raises an exception if no value given" do
-      expect { var.value("FOO" => "bar") }.to raise_error(ServiceSkeleton::Error::InvalidEnvironmentError)
-    end
-
-    context "with a default" do
-      let(:opts) { { default: [] } }
-
-      it "returns the default if no value given" do
-        expect(var.value("FOO" => "bar")).to eq([])
+    describe "variable object" do
+      before(:each) do
+        klass.path_list(:MY_PATH_LIST, **opts)
       end
 
-      it "parses a value if one is given" do
-        expect(var.value("MY_PATH_LIST" => "/xyzzy")).to eq(["/xyzzy"])
+      context "with no specified opts" do
+        let(:opts) { {} }
+
+        { "" => [], "/foo/bar" => ["/foo/bar"], "/x:/y" => ["/x", "/y"] }.each do |s, v|
+          it "returns an array for string #{s.inspect}" do
+            expect(variable("MY_PATH_LIST" => s).value).to eq(v)
+          end
+        end
+
+        it "raises an exception if no value given" do
+          expect { variable("FOO" => "bar") }.to raise_error(ServiceSkeleton::Error::InvalidEnvironmentError)
+        end
       end
-    end
 
-    context "with a sensitive variable" do
-      let(:opts) { { sensitive: true } }
+      context "with a default" do
+        let(:opts) { { default: [] } }
 
-      it "adds the variable to the list" do
-        expect(klass.registered_variables).to match([instance_of(ServiceSkeleton::ConfigVariable)])
+        it "returns the default if no value given" do
+          expect(variable("FOO" => "bar").value).to eq([])
+        end
+
+        it "parses a value if one is given" do
+          expect(variable("MY_PATH_LIST" => "/xyzzy").value).to eq(["/xyzzy"])
+        end
       end
 
-      it "marks the variable as sensitive" do
-        expect(klass.registered_variables.first.sensitive?).to eq(true)
+      context "with a sensitive variable" do
+        let(:opts) { { sensitive: true } }
+
+        it "redacts the variable value" do
+          env = { "FOO" => "bar", "MY_PATH_LIST" => "/secret/path" }
+
+          with_overridden_constant Object, :ENV, env do
+            expect { variable(env).redact!(env) }.to_not raise_error
+            expect(env).to eq("FOO" => "bar", "MY_PATH_LIST" => "*SENSITIVE*")
+          end
+        end
+
+        context "and a default" do
+          let(:opts) { { sensitive: true, default: true } }
+
+          it "does not add the variable to the environment" do
+            env = { "FOO" => "bar" }
+
+            with_overridden_constant Object, :ENV, env do
+              expect { variable(env).redact!(env) }.to_not raise_error
+              expect(env).to eq("FOO" => "bar")
+            end
+          end
+        end
       end
     end
   end
 
   describe "kv_list" do
-    let(:opts) { {} }
-    let(:var) { variable(:MY_KV_LIST) }
-
-    before(:each) do
-      klass.kv_list(:MY_KV_LIST, **opts)
-    end
+    let(:var_name) { :MY_KV_LIST }
 
     it "accepts a variable declaration and registers it" do
-      expect(klass.registered_variables).to match([instance_of(ServiceSkeleton::ConfigVariable)])
+      klass.kv_list(var_name)
+      expect(klass.registered_variables).to eq([{ name: :MY_KV_LIST, class: ServiceSkeleton::ConfigVariable::KVList, opts: { sensitive: false, key_pattern: /\AMY_KV_LIST_(.*)\z/ } }])
     end
 
-    it "raises an exception if no value given" do
-      expect { var.value("FOO" => "bar") }.to raise_error(ServiceSkeleton::Error::InvalidEnvironmentError)
-    end
-
-    it "picks out relevant records" do
-      expect(var.value(
-        "FOO" => "bar",
-        "MY_KV_LIST_x" => "y",
-        "MY_KV_LIST_baz" => "wombat",
-      )).to eq(x: "y", baz: "wombat")
-    end
-
-    context "with a default" do
-      let(:opts) { { default: { a: "42" } } }
-
-      it "returns the default if no value given" do
-        expect(var.value("FOO" => "bar")).to eq(a: "42")
+    describe "variable object" do
+      before(:each) do
+        klass.kv_list(:MY_KV_LIST, **opts)
       end
 
-      it "plucks the keys if they're given" do
-        expect(var.value(
-          "FOO" => "bar",
-          "MY_KV_LIST_x" => "y",
-        )).to eq(x: "y")
+      context "with no specified opts" do
+        let(:opts) { {} }
+
+        it "raises an exception if no variable names match" do
+          expect { variable("FOO" => "bar") }.to raise_error(ServiceSkeleton::Error::InvalidEnvironmentError)
+        end
+
+        it "picks out relevant records" do
+          expect(variable(
+            "FOO" => "bar",
+            "MY_KV_LIST_x" => "y",
+            "MY_KV_LIST_baz" => "wombat",
+          ).value).to eq(x: "y", baz: "wombat")
+        end
       end
-    end
 
-    context "with a sensitive variable" do
-      let(:opts) { { sensitive: true } }
+      context "with a default" do
+        let(:opts) { { default: { a: "42" } } }
 
-      it "adds the variable to the list" do
-        expect(klass.registered_variables).to match([instance_of(ServiceSkeleton::ConfigVariable)])
+        it "returns the default if no value given" do
+          expect(variable("FOO" => "bar").value).to eq(a: "42")
+        end
+
+        it "plucks the keys if they're given" do
+          expect(variable(
+            "FOO" => "bar",
+            "MY_KV_LIST_x" => "y",
+          ).value).to eq(x: "y")
+        end
       end
 
-      it "marks the variable as sensitive" do
-        expect(klass.registered_variables.first.sensitive?).to eq(true)
+      context "with a custom key_pattern" do
+        let(:opts) { { key_pattern: /\AOVER_HERE_(.*)\z/ } }
+
+        it "only plucks the keys that match the key pattern" do
+          expect(variable(
+            "FOO" => "bar",
+            "MY_KV_LIST_x" => "y",
+            "OVER_HERE_bob" => "fred",
+          ).value).to eq(bob: "fred")
+        end
+      end
+
+      context "with a sensitive variable" do
+        let(:opts) { { sensitive: true } }
+
+        it "redacts keys that match the key pattern" do
+          env = { "FOO" => "bar", "MY_KV_LIST_secret" => "s3kr1t" }
+
+          with_overridden_constant Object, :ENV, env do
+            expect { variable(env).redact!(env) }.to_not raise_error
+            expect(env).to eq("FOO" => "bar", "MY_KV_LIST_secret" => "*SENSITIVE*")
+          end
+        end
       end
     end
   end

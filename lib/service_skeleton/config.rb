@@ -13,8 +13,14 @@ class ServiceSkeleton
     def initialize(env, svc)
       @svc = svc
 
-      parse_registered_variables(env)
+      # Parsing registered variables will redact the environment, so we want
+      # to take a private unredacted copy before that happens
       @env = env.to_hash.dup.freeze
+
+      parse_registered_variables(env)
+
+      # Sadly, we can't setup the logger until we know *how* to setup the
+      # logger, which requires parsing config variables
       setup_logger
     end
 
@@ -25,26 +31,23 @@ class ServiceSkeleton
     private
 
     def parse_registered_variables(env)
-      @svc.registered_variables.each do |var|
-        val = var.value(env)
+      (@svc.registered_variables || []).map do |var|
+        var[:class].new(var[:name], env, **var[:opts])
+      end.each do |var|
+        val = var.value
+        method_name = var.method_name(@svc.service_name).to_sym
 
-        define_singleton_method(var.method_name(@svc.service_name)) do
+        define_singleton_method(method_name) do
           val
         end
 
-        define_singleton_method(var.method_name(@svc.service_name) + "=") do |v|
-          val = v
+        define_singleton_method(:"#{method_name}=") do |new_value|
+          val = new_value
         end
-
-        if var.sensitive?
-          if env.object_id != ENV.object_id
-            raise ServiceSkeleton::Error::CannotSanitizeEnvironmentError,
-                  "Attempted to sanitize sensitive variable #{var.name}, but was not passed the ENV object"
-          end
-
-          var.env_keys(env).each do |k|
-            env[k] = var.redacted_value
-          end
+      end.each do |var|
+        if var.redact!(env) && env.object_id != ENV.object_id
+          raise ServiceSkeleton::Error::CannotSanitizeEnvironmentError,
+                "Attempted to sanitize sensitive variable #{var.name}, but we're not operating on the process' environment"
         end
       end
     end
