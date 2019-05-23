@@ -57,6 +57,10 @@ class ServiceSkeleton
 
       register_variable(var_name, ConfigVariable::Enum, default: default, sensitive: sensitive, values: values)
     end
+
+    def url(var_name, default: UNDEFINED, sensitive: false)
+      register_variable(var_name, ConfigVariable::URL, default: default, sensitive: sensitive)
+    end
   end
 end
 
@@ -67,3 +71,4 @@ require_relative "config_variable/float"
 require_relative "config_variable/path_list"
 require_relative "config_variable/kv_list"
 require_relative "config_variable/enum"
+require_relative "config_variable/url"
