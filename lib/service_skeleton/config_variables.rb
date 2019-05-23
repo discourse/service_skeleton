@@ -48,6 +48,15 @@ class ServiceSkeleton
     def kv_list(var_name, default: UNDEFINED, sensitive: false, key_pattern: /\A#{var_name}_(.*)\z/)
       register_variable(var_name, ConfigVariable::KVList, default: default, sensitive: sensitive, key_pattern: key_pattern)
     end
+
+    def enum(var_name, values:, default: UNDEFINED, sensitive: false)
+      unless values.is_a?(Hash) || values.is_a?(Array)
+        raise ArgumentError,
+              "values option to enum must be a hash or array"
+      end
+
+      register_variable(var_name, ConfigVariable::Enum, default: default, sensitive: sensitive, values: values)
+    end
   end
 end
 
@@ -57,3 +66,4 @@ require_relative "config_variable/integer"
 require_relative "config_variable/float"
 require_relative "config_variable/path_list"
 require_relative "config_variable/kv_list"
+require_relative "config_variable/enum"
