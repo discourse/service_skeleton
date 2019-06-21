@@ -533,7 +533,7 @@ signals will be hooked with the following behaviour:
 * **`SIGHUP`** -- close and reopen the log file, if logging to a file on disk.
   Because of the `ServiceSkeleton`'s default log rotation policy, this shouldn't
   ordinarily be required, but if you've turned off the default log rotation,
-  you may need tis.
+  you may need this.
 
 * **`SIGQUIT`** -- dump a *whooooooole* lot of debugging information to
   standard error, including memory allocation summaries and stack traces of all
