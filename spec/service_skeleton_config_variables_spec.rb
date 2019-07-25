@@ -663,6 +663,7 @@ describe ServiceSkeleton::ConfigVariables do
             var = variable(env)
 
             expect(var.value).to eq("https://bob:s3kr1t@example.com")
+            expect(var.redact?(env)).to be(true)
             var.redact!(env)
             expect(env).to eq("MY_URL" => "https://bob:*REDACTED*@example.com")
           end

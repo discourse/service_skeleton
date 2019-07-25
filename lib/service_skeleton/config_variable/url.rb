@@ -3,6 +3,10 @@
 require "service_skeleton/config_variable"
 
 class ServiceSkeleton::ConfigVariable::URL < ServiceSkeleton::ConfigVariable
+  def redact?(env)
+    !!(env.has_key?(@name.to_s) && (@opts[:sensitive] || URI(env[@name.to_s] || "").password))
+  end
+
   def redact!(env)
     if env.has_key?(@name.to_s)
       super

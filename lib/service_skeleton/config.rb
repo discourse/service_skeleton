@@ -45,9 +45,13 @@ class ServiceSkeleton
           val = new_value
         end
       end.each do |var|
-        if var.redact!(env) && env.object_id != ENV.object_id
-          raise ServiceSkeleton::Error::CannotSanitizeEnvironmentError,
-                "Attempted to sanitize sensitive variable #{var.name}, but we're not operating on the process' environment"
+        if var.redact?(env)
+          if env.object_id != ENV.object_id
+            raise ServiceSkeleton::Error::CannotSanitizeEnvironmentError,
+                  "Attempted to sanitize sensitive variable #{var.name}, but we're not operating on the process' environment"
+          else
+            var.redact!(env)
+          end
         end
       end
     end

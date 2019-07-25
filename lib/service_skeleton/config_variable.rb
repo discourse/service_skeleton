@@ -16,6 +16,10 @@ class ServiceSkeleton
       @name.to_s.gsub(/\A#{Regexp.quote(svc_name)}_/i, '').downcase
     end
 
+    def redact?(env)
+      @opts[:sensitive]
+    end
+
     def redact!(env)
       if @opts[:sensitive]
         env[@name.to_s] = "*SENSITIVE*" if env.has_key?(@name.to_s)
