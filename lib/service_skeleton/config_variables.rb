@@ -25,8 +25,8 @@ class ServiceSkeleton
       }
     end
 
-    def string(var_name, default: UNDEFINED, sensitive: false)
-      register_variable(var_name, ConfigVariable::String, default: default, sensitive: sensitive)
+    def string(var_name, default: UNDEFINED, sensitive: false, match: nil)
+      register_variable(var_name, ConfigVariable::String, default: default, sensitive: sensitive, match: match)
     end
 
     def boolean(var_name, default: UNDEFINED, sensitive: false)

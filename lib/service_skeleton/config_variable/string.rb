@@ -7,7 +7,12 @@ class ServiceSkeleton::ConfigVariable::String < ServiceSkeleton::ConfigVariable
 
   def pluck_value(env)
     maybe_default(env) do
-      env[@name.to_s]
+      env[@name.to_s].tap do |s|
+        if @opts[:match] && s !~ @opts[:match]
+          raise ServiceSkeleton::Error::InvalidEnvironmentError,
+                "Value for #{@name} must match #{@opts[:match]}"
+        end
+      end
     end
   end
 end

@@ -39,7 +39,7 @@ describe ServiceSkeleton::ConfigVariables do
 
     it "accepts a variable declaration and registers it" do
       klass.string(var_name)
-      expect(klass.registered_variables).to eq([{ name: :MY_STRING, class: ServiceSkeleton::ConfigVariable::String, opts: { sensitive: false } }])
+      expect(klass.registered_variables).to include(include(name: :MY_STRING, class: ServiceSkeleton::ConfigVariable::String))
     end
 
     describe "variable object" do
@@ -103,6 +103,22 @@ describe ServiceSkeleton::ConfigVariables do
               expect(env).to eq("FOO" => "bar")
             end
           end
+        end
+      end
+
+      context "with a match" do
+        let(:opts) { { match: /foo/, default: "nah" } }
+
+        it "accepts a value that matches" do
+          expect(variable("MY_STRING" => "boofoobloo").value).to eq("boofoobloo")
+        end
+
+        it "does not accept a value that doesn't match" do
+          expect { variable("MY_STRING" => "barharhar") }.to raise_error(ServiceSkeleton::Error::InvalidEnvironmentError)
+        end
+
+        it "is OK with a default that doesn't match" do
+          expect(variable("SOMETHING" => "funny").value).to eq("nah")
         end
       end
     end
