@@ -29,17 +29,7 @@ module ServiceSkeleton
         service_signal_handlers: { klass.service_name.to_sym => klass.registered_signal_handlers }
       )
 
-      begin
-        @ultravisor.add_child(
-          id: klass.service_name.to_sym,
-          klass: klass,
-          method: :run,
-          args: [config: @config, metrics: @metrics_registry]
-        )
-      rescue Ultravisor::InvalidKAMError
-        raise ServiceSkeleton::Error::InvalidServiceClassError,
-              "Class #{klass.to_s} does not implement the `run' instance method"
-      end
+      klass.register_ultravisor_children(@ultravisor, config: @config, metrics_registry: @metrics_registry)
     end
 
     def run
