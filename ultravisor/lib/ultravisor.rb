@@ -89,6 +89,19 @@ class Ultravisor
 		end
 	end
 
+	def remove_child(id)
+		@op_m.synchronize do
+			c = @children.assoc(id)
+
+			return nil if c.nil?
+
+			@children.delete(c)
+			if @running_thread
+				c.last.shutdown
+			end
+		end
+	end
+
 	private
 
 	def validate_strategy
