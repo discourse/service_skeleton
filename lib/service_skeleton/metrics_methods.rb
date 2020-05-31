@@ -1,24 +1,37 @@
 # frozen_string_literal: true
 
-class ServiceSkeleton
+require "prometheus/client"
+
+require_relative "metric_method_name"
+
+Prometheus::Client::Metric.include(ServiceSkeleton::MetricMethodName)
+
+module ServiceSkeleton
   module MetricsMethods
-    def service=(svc)
-      @service = svc
+    def registered_metrics
+      @registered_metrics || []
     end
 
-    def register(metric)
-      method_name = metric.name.to_s.gsub(/\A#{Regexp.quote(@service.service_name)}_/, '').to_sym
+    def metric(metric)
+      @registered_metrics ||= []
 
-      if self.class.method_defined?(method_name)
-        raise ServiceSkeleton::Error::InvalidMetricNameError,
-              "There is already a method named #{method_name} on ##metrics, so you can't have a metric named #{metric.name}"
-      end
+      @registered_metrics << metric
+    end
 
-      define_singleton_method(method_name) do
-        metric
-      end
+    def counter(name, docstring, base_labels = {})
+      metric(Prometheus::Client::Counter.new(name, docstring, base_labels))
+    end
 
-      super
+    def gauge(name, docstring, base_labels = {})
+      metric(Prometheus::Client::Gauge.new(name, docstring, base_labels))
+    end
+
+    def summary(name, docstring, base_labels = {})
+      metric(Prometheus::Client::Summary.new(name, docstring, base_labels))
+    end
+
+    def histogram(name, docstring, base_labels = {}, buckets = Prometheus::Client::Histogram::DEFAULT_BUCKETS)
+      metric(Prometheus::Client::Histogram.new(name, docstring, base_labels, buckets))
     end
   end
 end

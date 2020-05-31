@@ -6,10 +6,11 @@ other parts of a larger system.  It provides:
 * Prometheus-based metrics registry;
 * Signal handling;
 * Configuration extraction from the process environment;
+* Supervision and automated restarting of your service code;
 * and more.
 
 The general philosophy of `ServiceSkeleton` is to provide features which have
-been found to be almost universally necessary, in modern deployment
+been found to be almost universally necessary in modern deployment
 configurations, to prefer convenience over configuration, and to always be
 secure by default.
 
@@ -40,7 +41,9 @@ like this:
 
     require "service_skeleton"
 
-    class HelloService < ServiceSkeleton
+    class HelloService
+      include ServiceSkeleton
+
       def run
         loop do
           puts "Hello, Service!"
@@ -49,71 +52,132 @@ like this:
       end
     end
 
-    HelloService.new(ENV).start if __FILE__ == $0
+    ServiceSkeleton::Runner.new(HelloService, ENV).run if __FILE__ == $0
 
 First, we require the `"service_skeleton"` library, which is a pre-requisite
-for the `ServiceSkeleton` base class to be available, which is subclassed by
-`HelloService`.  The `run` method is where you put your service's work,
-typically in an infinite loop, because services are long-running, persistent
-processes.
+for the `ServiceSkeleton` module to be available.  Your code is placed in
+its own class in the `run` method, where you put your service's logic.  The
+`ServiceSkeleton` module provides helper methods and initializers, which will
+be introduced as we go along.
 
-Finally, the last line instantiates an instance of our service (passing the
-process environment in, for configuration), and then calls `.run` on that
-object -- but only if we were called as a standalone program (rather than
-being `require`'d ourselves).
+The `run` method is typically an infinite loop, because services are long-running,
+persistent processes.  If you `run` method exits, or raises an unhandled exception,
+the supervisor will restart it.
+
+Finally, the last line uses the `ServiceSkeleton::Runner` class to actually run
+your service.  This ensures that all of the scaffolding services, like the
+signal handler and metrics server, are up and running alongside your service
+code.
 
 
 ## The `#run` loop
 
 The core of a service is usually some sort of infinite loop, which waits for a
-reason to do something, and then does it.  A lot of services are
-network-accessible, and so the "reason to do something" is "because someone
-made a connection to a port I'm listening".  Other times it could be because of
-a periodic timer, a filesystem event, or anything else that takes your fancy.
+reason to do something, and then does it.  A lot of services are network
+accessible, and so the "reason to do something" is "because someone made a
+connection to a port on which I'm listening".  Other times it could be because
+of a periodic timer firing, a filesystem event, or anything else that takes
+your fancy.
 
 Whatever it is, `ServiceSkeleton` doesn't discriminate.  All you have to do is
-write it in your subclass' `#run` method, and `ServiceSkeleton` will take care
-of the rest.
-
-If your `#run` method exits, the service will terminate.
+write it in your service class' `#run` method, and we'll take care of the rest.
 
 
 ### STAHP!
 
-Because the range of what a service can do is so broad, we can't provide a
-generic way to stop your service.  You'll want to provide a (thread-safe)
-`#shutdown` method, which will gracefully cause your `#run` method to clean up
-its resources and return.  If you don't provide such a method, then the default
-behaviour of `#shutdown` is to send an exception to the running thread, which
-is somewhat brutal and prone to unpleasantness.  If your service wants to
-cleanly exit of its own accord, it can also just return from the `#run` method,
-and the service will terminate without any fuss.
+When your service needs to be stopped for one reason or another, `ServiceSkeleton`
+needs to be able to tell your code to stop.  By default, the thread that is
+running your service will just be killed, which might be fine if your service
+holds no state or persistent resources, but often that isn't the case.
+
+If your code needs to stop gracefully, you should define a (thread-safe)
+instance method, `#shutdown`, which does whatever is required to signal to
+your service worker code that it is time to return from the `#run` method.
+What that does, exactly, is up to you.
+
+```
+class CustomShutdownService
+  include ServiceSkeleton
+
+  def run
+    until @shutdown do
+      puts "Hello, Service!"
+      sleep 1
+    end
+
+    puts "Shutting down gracefully..."
+  end
+
+  def shutdown
+    @shutdown = true
+  end
+end
+```
+
+To avoid the unpleasantness of a hung service, there is a limit on the amount
+of time that `ServiceSkeleton` will wait for your service code to terminate.
+This is, by default, five seconds, but you can modify that by defining a
+`#shutdown_timeout` method, which returns a `Numeric`, to specify the number of
+seconds that `ServiceSkeleton` should wait for termination.
+
+```
+class SlowShutdownService
+  include ServiceSkeleton
+
+  def run
+    until @shutdown do
+      puts "Hello, Service!"
+      sleep 60
+    end
+  end
+
+  def shutdown
+    @shutdown = true
+  end
+
+  def shutdown_timeout
+    # We need an unusually long shutdown timeout for this service because
+    # the shutdown flag is only checked once a minute, which is much longer
+    # than the default shutdown period.
+    90
+  end
+end
+```
+
+If your service code does not terminate before the timeout, the thread will be,
+once again, unceremoniously killed.
 
 
 ### Exceptional Behaviour
 
 If your `#run` loop happens to raise an unhandled exception, it will be caught,
-logged, and the service will terminate.  `ServiceSkeleton` believes in the
-value of "fail fast", and if an exception makes it all way out, then there's no
-telling what has gone wrong or if it can be reasonably recovered.  The safest
-option is to terminate the service process entirely, and have your service
-supervisor start everything up again from scratch.
+logged, and your service will be restarted.  This involves instantiating a new
+instance of your service class, and calling `#run` again.
+
+In the event that the problem that caused the exception isn't transient, and
+your service code keeps exiting (either by raising an exception, or the `#run`
+method returning), the supervisor will, after a couple of retries, terminate
+the whole process.
+
+This allows for a *really* clean slate restart, by starting a whole new
+process.  Your process manager should handle automatically restarting the
+process in a sensible manner.
 
 
 ## The Service Name
 
 Several aspects of a `ServiceSkeleton` service, including environment variable
-and metric names, expect the service's name as a prefix by default.  The
-service name is derived from the name of the class that subclasses
-`ServiceSkeleton`, by converting the `CamelCase` class name into a `snake_case`
-service name.  If the class name is in a namespace, that is included also, with
-the `::` turned into `_`.
+and metric names, can incorporate the service's name, usually as a prefix.  The
+service name is derived from the name of the class that you provide to
+`ServiceSkeleton::Runner.new`, by converting the `CamelCase` class name into a
+`snake_case` service name.  If the class name is in a namespace, that is
+included also, with the `::` turned into `_`.
 
 
 ## Configuration
 
 Almost every service has a need for some amount of configuration.  In keeping
-with the general principles of the [12 factor app](https://12factor.net), the
+with the general principles of the [12 factor app](https://12factor.net),
 `ServiceSkeleton` takes configuration from the environment.  However, we try to
 minimise the amount of manual effort you need to expend to make that happen,
 and provide configuration management as a first-class operation.
@@ -121,15 +185,17 @@ and provide configuration management as a first-class operation.
 
 ### Basic Configuration
 
-Every `ServiceSkeleton` has an instance method defined, called `config`, which
-returns an instance of `ServiceSkeleton::Config` (or some other class you
+The `ServiceSkeleton` module defines an instance method, called `#config`, which
+returns an instance of {ServiceSkeleton::Config} (or some other class you
 specify; more on that below), which provides access to the environment that was
 passed into the service object at instantiation time (ie the `ENV` in
-`MyService.new(ENV)`) via the `#[]` method.  So, in a very simple
+`ServiceSkeleton.new(MyService, ENV)`) via the `#[]` method.  So, in a very simple
 application where you want to get the name of the thing to say hello to, it
 might look like this:
 
-    class GenericHelloService < ServiceSkeleton
+    class GenericHelloService
+      include ServiceSkeleton
+
       def run
         loop do
           puts "Hello, #{config["RECIPIENT"]}!"
@@ -138,17 +204,21 @@ might look like this:
       end
     end
 
+    ServiceSkeleton::Runner.new(GenericHelloService, "RECIPIENT" => "Bob").start
 
-### Variable Declaration
+This will print "Hello, Bob!" every second.
+
+
+### Declaring Configuration Variables
 
 If your application has very minimal needs,  it's possible that directly
-accessing the environment will be sufficient.  However, you can (and probably
+accessing the environment will be sufficient.  However, you can (and usually
 should) declare your configuration variables in your service class, because
-that way you can get coerced values (numbers and booleans, rather than strings
-everywhere), range and format checking (say "the number must be between one and
-ten", or "the string must match this regex"), default values, and error
-reporting.  You also get direct access to the configuration value as a method
-call on the `config` object.
+that way you can get coerced values (numbers, booleans, lists, etc, rather than
+just plain strings), range and format checking (say "the number must be an
+integer between one and ten", or "the string must match this regex"), default
+values, and error reporting.  You also get direct access to the configuration
+value as a method call on the `config` object.
 
 To declare configuration variables, simply call one of the "config declaration
 methods" (as listed in the `ServiceSkeleton::ConfigVariables` module) in your
@@ -156,20 +226,24 @@ class definition, and pass it an environment variable name (as a string or
 symbol) and any relevant configuration parameters (like a default, or a
 validity range, or whatever).
 
-When your service object is instantiated, the environment will be examined and
-the configuration setup.  If any values are invalid (number out of range, etc)
-or missing (for any configuration variable that doesn't have a default), then
-an error will be logged and the service will not start.
+When you run your service (via {ServiceSkeleton::Runner#new}), the environment
+you pass in will be examined and the configuration initialised.  If any values
+are invalid (number out of range, etc) or missing (for any configuration
+variable that doesn't have a default), then a
+{ServiceSkeleton::InvalidEnvironmentError} exception will be raised and the
+service will not start.
 
 During your service's execution, any time you need to access a configuration
 value, just call the matching method name (the all-lowercase version of the
-environment variable name) on `config`, and you'll get the value in your
-lap.
+environment variable name, without the service name prefix) on `config`, and
+you'll get the value in your lap.
 
 Here's a version of our generic greeter service, using declared configuration
 variables:
 
-    class GenericHelloService < ServiceSkeleton
+    class GenericHelloService
+      include ServiceSkeleton
+
       string :RECIPIENT, matches: /\A\w+\z/
 
       def run
@@ -180,27 +254,51 @@ variables:
       end
     end
 
+    begin
+      ServiceSkeleton::Runner.new(GenericHelloService, ENV).run
+    rescue ServiceSkeleton::InvalidEnvironmentError => ex
+      $stderr.puts "Configuration error found: #{ex.message}"
+      exit 1
+    end
+
+This service, if run without a `RECIPIENT` environment variable being available,
+will exit with an error.  If that isn't what you want, you can declare a
+default for a config variable, like so:
+
+    class GenericHelloService
+      include ServiceSkeleton
+
+      string :RECIPIENT, matches: /\a\w+\z/, default: "Anonymous Coward"
+
+      # ...
+
+*This* version will print "Hello, Anonymous Coward!" if no `RECIPIENT`
+environment variable is available.
+
 
 ### Environment Variable Prefixes
 
 It's common for all (or almost all) of your environment variables to have a
-common prefix, usually named for your service, so it's easy to identify your
-service's configuration from anything else that's lying around.  However, you
-don't want to have to use that prefix when accessing your `config` methods.
+common prefix, usually named for your service, to distinguish  your service's
+configuration from any other environment variables lying around.  However, to
+save on typing, you don't want to have to use that prefix when accessing your
+`config` methods.
 
 Enter: the service name prefix.  Any of your environment variables whose name
 starts with [your service's name](#the-service-name) (matched
 case-insensitively) followed by an underscore will have that part of the
 environment variable name removed to determine the method name on `config`.
 The *original* environment variable name is still matched to a variable
-declaration, so, you need to declare the variable *with* the prefix, but the
-method name won't have it.
+declaration, so, you need to declare the variable *with* the prefix, it is only
+the method name on the `config` object that won't have the prefix.
 
 Using this environment variable prefix support, the `GenericHelloService` would
 have a (case-insensitive) prefix of `generic_hello_service_`.  In that case,
 extending the above example a little more, you could do something like this:
 
-    class GenericHelloService < ServiceSkeleton
+    class GenericHelloService
+      include ServiceSkeleton
+
       string :GENERIC_HELLO_SERVICE_RECIPIENT, matches: /\A\w+\z/
 
       def run
@@ -221,12 +319,14 @@ Sometimes your service will take configuration data that really, *really*
 shouldn't be available to subprocesses or anyone who manages to catch a
 sneak-peek at your service's environment.  In that case, you can declare an
 environment variable as "sensitive", and after the configuration is parsed,
-that environment variable will be wiped from the environment.
+that environment variable will be redacted from the environment.
 
 To declare an environment variable as "sensitive", simply pass the `sensitive`
 parameter, with a trueish value, to the variable declaration in your class:
 
-    class DatabaseManager < ServiceSkeleton
+    class DatabaseManager
+      include ServiceSkeleton
+
       string :DB_PASSWORD, sensitive: true
 
       ...
@@ -234,17 +334,18 @@ parameter, with a trueish value, to the variable declaration in your class:
 
 > **NOTE**: The process environment can only be modified if you pass the real,
 > honest-to-goodness `ENV` object into `MyServiceClass.new(ENV)`.  If you
-> provide a copy, or some other hash, that'll work *normally*, but if you have
-> sensitive variables, the service will log an error and refuse to start.  This
-> avoids the problems of accidentally modifying global state if that would be
-> potentially bad (we assume you copied `ENV` for a reason) without leaving a
-> gaping security hole (sensitive data blindly passed into subprocesses that
-> you didn't expect).
+> provide a copy of `ENV`, or some other hash entirely, that'll work if you
+> don't have any sensitive variables declared, but the moment you declare a
+> sensitive variable, passing in any hash other than `ENV` will cause the
+> service to log an error and refuse to start.  This avoids the problems of
+> accidentally modifying global state if that would be potentially bad (we
+> assume you copied `ENV` for a reason) without leaving a gaping security hole
+> (sensitive data blindly passed into subprocesses that you didn't expect).
 
 
-### Custom Configuration Class
+### Using a Custom Configuration Class
 
-Whilst we hope that `ServiceSkeleton::Config`  class will be useful in most
+Whilst we hope that {ServiceSkeleton::Config} will be useful in most
 situations, there are undoubtedly cases where the config management we provide
 won't be enough.  In that case, you are encouraged to subclass
 `ServiceSkeleton::Config` and augment the standard interface with your own
@@ -260,7 +361,9 @@ class method in your service's class definition, like this:
       end
     end
 
-    class MyService < ServiceSkeleton
+    class MyService
+      include ServiceSkeleton
+
       config_class MyServiceConfig
 
       def run
@@ -281,11 +384,11 @@ for you to use.
 
 ### What You Get
 
-Every instance of your service class (as subclassed from `ServiceSkeleton`)
-has a method named, uncreatively, `logger`.  It is a (more-or-less) straight-up
-instance of the Ruby stdlib `Logger`, on which you can call all the usual
-methods (`#debug`, `#info`, `#warn`, `#error`, etc).  By default, it sends all
-log messages to standard error.
+Every instance of your service class has a method named, uncreatively,
+`logger`.  It is a (more-or-less) straight-up instance of the Ruby stdlib
+`Logger`, on which you can call all the usual methods (`#debug`, `#info`,
+`#warn`, `#error`, etc).  By default, it sends all log messages to standard
+error.
 
 When calling the logger, you really, *really* want to use the
 "progname+message-in-a-block" style of recording log messages, which looks like
@@ -301,22 +404,22 @@ wish to actively debug, based on log messages that are tagged with a specified
 progname.  No more grovelling through thousands of lines of debug logging to
 find the One Useful Message.
 
-The `ServiceSkeleton` also provides built-in dynamic log level adjustment;
+You also get, as part of this package, built-in dynamic log level adjustment;
 using Unix signals or the admin HTTP interface (if enabled), you can tell the
 logger to increase or decrease logging verbosity *without interrupting
 service*.  We are truly living in the future.
 
-Finally, if you're a devotee of the ELK stack, we can automagically send log
-entries straight into logstash, rather than you having to do it in some
-more roundabout fashion.
+Finally, if you're a devotee of the ELK stack, the logger can automagically
+send log entries straight into logstash, rather than you having to do it in
+some more roundabout fashion.
 
 
 ### Logging Configuration
 
 The logger automatically sets its configuration from, you guessed it, the
 environment.  The following environment variables are recognised by the logger.
-All are all-uppercase, and the `<SERVICENAME>_` portion is the all-uppercase
-[service name](#the-service-name).
+All environment variable names are all-uppercase, and the `<SERVICENAME>_`
+portion is the all-uppercase [service name](#the-service-name).
 
 * **`<SERVICENAME>_LOG_LEVEL`** (default: `"INFO"`) -- the minimum severity of
   log messages which will be emitted by the logger.
@@ -327,21 +430,21 @@ All are all-uppercase, and the `<SERVICENAME>_` portion is the all-uppercase
 
   If you wish to change the severity level for a single progname, you can
   override the default log level for messages with a specific progname, by
-  specifying one or more "progname severities" separated by commas.  A progname
-  severity looks like this:
+  specifying one or more "progname/severity" pairs, separated by commas.  A
+  progname/severity pair looks like this:
 
         <progname>=<severity>
 
   To make things even more fun, if `<progname>` looks like a regular expression
   (starts with `/` or `%r{`, and ends with `/` or `}` plus optional flag
   characters), then all log messages with prognames *matching* the specified
-  regexp will have that severity applied.  First match wins.  The default is
+  regex will have that severity applied.  First match wins.  The default is
   still specified as a bare severity name, and the default can only be set
   once.
 
-  That's a lot to take in, so here's an example which sets the default to `INFO`,
-  debugs the `buggy` progname, and only emits errors for messages with the
-  (case-insensitive) string `noisy` in their progname:
+  That's a lot to take in, so here's an example which sets the default to
+  `INFO`, debugs the `buggy` progname, and only emits errors for messages with
+  the (case-insensitive) string `noisy` in their progname:
 
         INFO,buggy=DEBUG,/noisy/i=ERROR
 
@@ -367,8 +470,8 @@ All are all-uppercase, and the `<SERVICENAME>_` portion is the all-uppercase
   where log messages aren't automatically timestamped, then you can use this to
   get them back.
 
-* **`<SERVICENAME>_LOG_FILE`** (string; default: `"/dev/stderr`) -- the file to
-  which log messages are written.  The default, to send messages to standard
+* **`<SERVICENAME>_LOG_FILE`** (string; default: `"/dev/stderr"`) -- the file
+  to which log messages are written.  The default, to send messages to standard
   error, is a good choice if you are using a supervisor system which captures
   service output to its own logging system, however if you are stuck without
   such niceties, you can specify a file on disk to log to instead.
@@ -403,7 +506,7 @@ All are all-uppercase, and the `<SERVICENAME>_` portion is the all-uppercase
 ## Metrics
 
 Running a service without metrics is like trying to fly a fighter jet whilst
-blindfolded.  Everything seems to be going OK until you slam into the side of a
+blindfolded: everything seems to be going OK until you slam into the side of a
 mountain you never saw coming.  For that reason, `ServiceSkeleton` provides a
 Prometheus-based metrics registry, a bunch of default process-level metrics, an
 optional HTTP metrics server, and simple integration with [the Prometheus ruby
@@ -415,42 +518,40 @@ easy as possible to instrument the heck out of your service.
 ### Defining and Using Metrics
 
 All the metrics you want to use within your service need to be registered
-before use.  This is typically done in the `#run` method, before entering the
-infinite loop.
+before use.  This is done via class methods, similar to declaring environment
+variables.
 
 To register a metric, use one of the standard metric registration methods from
 [Prometheus::Client::Registry](https://www.rubydoc.info/gems/prometheus-client/0.8.0/Prometheus/Client/Registry)
-(`#counter`, `#gauge`, `#histogram`, `#summary`, or `#register`) on the `metrics`
-object to create or register the metric.
+(`counter`, `gauge`, `histogram`, `summary`) or `metric` (equivalent
+to the `register` method of `Prometheus::Client::Registry) in your class
+definition to register the metric for use.
 
 In our generic greeter service we've been using as an example so far, you might
 like to define a metric to count how many greetings have been sent.  You'd define
 such a metric like this:
 
-    class GenericHelloService < ServiceSkeleton
+    class GenericHelloService
+      include ServiceSkeleton
+
       string :GENERIC_HELLO_SERVICE_RECIPIENT, matches: /\A\w+\z/
 
-      def run
-        metrics.counter(:greetings_total, "How many greetings we have sent")
+      counter :greetings_total, "How many greetings we have sent"
 
-        loop do
-          puts "Hello, #{config.recipient}!"
-          sleep 1
-        end
-      end
-    end
+      # ...
 
-When it comes time to actually *use* the metrics you have created, it's typical
-to keep a copy of the metric object laying around, or call `metrics.get`.  However,
-we make it easier to access your metrics, by defining a method named for the metric
-on `metrics`.  Thus, to increment our greeting counter, you can simply do:
+When it comes time to actually *use* the metrics you have created, you access
+them as methods on the `metrics` method in your service worker instance.  Thus,
+to increment our greeting counter, you simply do:
 
-    class GenericHelloService < ServiceSkeleton
+    class GenericHelloService
+      include ServiceSkeleton
+
       string :GENERIC_HELLO_SERVICE_RECIPIENT, matches: /\A\w+\z/
 
-      def run
-        metrics.counter(:greetings_total, "How many greetings we have sent")
+      counter :greetings_total, "How many greetings we have sent"
 
+      def run
         loop do
           puts "Hello, #{config.recipient}!"
           metrics.greetings_total.increment(recipient: config.recipient)
@@ -464,12 +565,14 @@ any metrics you define which have the [service name](#the-service-name) as a
 prefix will have that prefix (and the immediately-subsequent underscore) removed
 before defining the metric accessor method, which keeps typing to a minimum:
 
-    class GenericHelloService < ServiceSkeleton
+    class GenericHelloService
+      include ServiceSkeleton
+
       string :GENERIC_HELLO_SERVICE_RECIPIENT, matches: /\A\w+\z/
 
-      def run
-        metrics.counter(:generic_hello_service_greetings_total, "How many greetings we have sent")
+      counter :generic_hello_service_greetings_total, "How many greetings we have sent"
 
+      def run
         loop do
           puts "Hello, #{config.recipient}!"
           metrics.greetings_total.increment(recipient: config.recipient)
@@ -501,7 +604,7 @@ all-uppercase, and the `<SERVICENAME>_` portion is the all-uppercase version
 of [the service name](#the-service-name).
 
 * **`<SERVICENAME>_METRICS_PORT`** (integer; range 1..65535; default: `""`) --
-  if set to a non-empty integer which is a valid port number (`1` to `65535`,
+  if set to an integer which is a valid port number (`1` to `65535`,
   inclusive), an HTTP server will be started which will respond to a request to
   `/metrics` with a Prometheus-compatible dump of time series data.
 
@@ -519,13 +622,15 @@ behaviours for common signals.
 
 ### Default Signals
 
-When the `#run` method on your service instance is called, the following
-signals will be hooked with the following behaviour:
+When the `#run` method on a `ServiceSkeleton::Runner` instance is called, the
+following signals will be hooked, and will perform the described action when
+that signal is received:
 
 * **`SIGUSR1`** -- increase the default minimum severity for messages which
-  will be emitted by the logger.  The default severity only applies to log
-  messages whose progname does not match a "progname specifier" (see "[Logging
-  Configuration](#logging-configuration)").
+  will be emitted by the logger (`FATAL` -> `ERROR` -> `WARN` -> `INFO` ->
+  `DEBUG`).  The default severity only applies to log messages whose progname
+  does not match a "progname/severity" pair (see [Logging
+  Configuration](#logging-configuration)).
 
 * **`SIGUSR2`** -- decrease the default minimum severity for messages which
   will be emitted by the logger.
@@ -543,37 +648,42 @@ signals will be hooked with the following behaviour:
 
 * **`SIGINT`** / **`SIGTERM`** -- ask the service to gracefully stop running.
   It will call your service's `#shutdown` method to ask it to stop what it's
-  doing and exit.  If the signal is sent twice, your run method will be
-  summarily terminated and everything will be terminated quickly.  As usual, if
-  a service process needs to be whacked completely and utterly *right now*,
-  `SIGKILL` is what you want to use.
+  doing and exit.  If the signal is sent a second time, the service will be
+  summarily terminated as soon as practical, without being given the
+  opportunity to gracefully release resources.  As usual, if a service process
+  needs to be whacked completely and utterly *right now*, `SIGKILL` is what you
+  want to use.
 
 
 ### Hooking Signals
 
 In addition to the above default signal dispositions, you can also hook signals
 yourself for whatever purpose you desire.  This is typically done in your
-`#run` method, before entering the infinite loop.
+`#run` method, before entering the main service loop.
 
 To hook a signal, just call `hook_signal` with a signal specification and a
-block of code to execute when the signal fires.  You can even hook the same
-signal more than once, because the signal handlers that `SkeletonService` uses
-chain to other signal handlers.  As an example, if you want to print "oof!"
-every time the `SIGCONT` signal is received, you'd do something like this:
+block of code to execute when the signal fires in your class definition.  You
+can even hook the same signal more than once, because the signal handlers that
+`ServiceSkeleton` uses chain to other signal handlers.  As an example, if you
+want to print "oof!" every time the `SIGCONT` signal is received, you'd do
+something like this:
 
-    class MyService < ServiceSkeleton
+    class MyService
+      include ServiceSkeleton
+
+      hook_signal("CONT") { puts "oof!" }
+
       def run
-        hook_signal("CONT") { puts "oof!" }
-
         loop { sleep }
       end
     end
 
+The code in the block will be executed in the context of the service worker
+instance that is running at the time the signal is received.  You are
+responsible for ensuring that whatever your handler does is concurrency-safe.
+
 When the service is shutdown, all signal handlers will be automatically
 unhooked, which saves you having to do it yourself.
-
-> **NOTE**: You can define a maximum of 256 signal hooks in a single service,
-> including the default signal hooks.
 
 
 ## HTTP Admin Interface
@@ -586,9 +696,9 @@ different?
 ### HTTP Admin Configuration
 
 In the spirit of "secure by default", you must explicitly enable the HTTP admin
-interface, and it requires authentication.  To do that, use the following
-environment variables, where `<SERVICENAME>_` is the all-uppercase version of
-[the service name](#the-service-name).
+interface, and configure an authentication method.  To do that, use the
+following environment variables, where `<SERVICENAME>_` is the all-uppercase
+version of [the service name](#the-service-name).
 
 * **`<SERVICENAME>_HTTP_ADMIN_PORT`** (integer; range 1..65535; default: `""`)
   -- if set to a valid port number (`1` to `65535` inclusive), the HTTP admin
@@ -612,7 +722,11 @@ environment variables, where `<SERVICENAME>_` is the all-uppercase version of
   interface to be enabled.
 
 
-### HTTP Admin Features
+### HTTP Admin Usage
+
+The HTTP admin interface provides both an interactive, browser-based mode,
+as well as a RESTful interface, which should, in general, provide equivalent
+functionality.
 
 * Visiting the service's `IP address:port` in a web browser will bring up an HTML
   interface showing all the features that are available.  Usage should
@@ -637,7 +751,8 @@ conduct](CODE_OF_CONDUCT.md).
 Unless otherwise stated, everything in this repo is covered by the following
 copyright notice:
 
-    Copyright (C) 2018  Civilized Discourse Construction Kit, Inc.
+    Copyright (C) 2018, 2019  Civilized Discourse Construction Kit, Inc.
+    Copyright (C) 2019, 2020  Matt Palmer
 
     This program is free software: you can redistribute it and/or modify it
     under the terms of the GNU General Public License version 3, as

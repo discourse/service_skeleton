@@ -2,17 +2,21 @@
 
 require "service_skeleton"
 
-class SpecService < ServiceSkeleton
-  private
+class SpecService
+  include ServiceSkeleton
 
   def run
-    raise Object.const_get(@env["RAISE_EXCEPTION"]) if @env["RAISE_EXCEPTION"]
+    raise Object.const_get(config.raise_exception) if config.raise_exception
+    return if config.return
+    sleep
   end
 end
 
 class CustomConfig < ServiceSkeleton::Config
 end
 
-class ConfigService < ServiceSkeleton
+class ConfigService
+  include ServiceSkeleton
+
   config_class CustomConfig
 end

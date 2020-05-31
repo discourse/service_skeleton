@@ -33,13 +33,14 @@ Gem::Specification.new do |s|
   s.required_ruby_version = ">= 2.5.0"
 
   s.add_runtime_dependency "frankenstein", "~> 1.2"
-  s.add_runtime_dependency "loggerstash", "~> 0.0"
+  s.add_runtime_dependency "loggerstash", ">= 0.0.9", "< 1"
   # prometheus-client provides no guaranteed backwards compatibility,
   # and in fact happily breaks things with no notice, so we're stuck
   # with hard-coding a specific version to avoid unexpected disaster.
   s.add_runtime_dependency "prometheus-client", "0.8.0"
   s.add_runtime_dependency "sigdump", "~> 0.2"
   s.add_runtime_dependency "to_regexp", "~> 0.2"
+  s.add_runtime_dependency "ultravisor", "~> 0.a"
 
   s.add_development_dependency 'bundler'
   s.add_development_dependency 'github-release'
@@ -50,7 +51,8 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'rake', "~> 12.0"
   s.add_development_dependency 'redcarpet'
   s.add_development_dependency 'rspec'
-  s.add_development_dependency 'rubocop'
+  s.add_development_dependency 'rubocop', "~> 0.79"
+  s.add_development_dependency 'rubocop-discourse'
   s.add_development_dependency 'simplecov'
   s.add_development_dependency 'yard'
 end

@@ -6,18 +6,19 @@ require_relative "./filtering_logger"
 
 require "loggerstash"
 
-class ServiceSkeleton
+module ServiceSkeleton
   class Config
-    attr_reader :logger, :env
+    attr_reader :logger, :env, :service_name
 
-    def initialize(env, svc)
-      @svc = svc
+    def initialize(env, service_name, variables)
+      @service_name = service_name
 
-      # Parsing registered variables will redact the environment, so we want
-      # to take a private unredacted copy before that happens
+      # Parsing variables will redact the environment, so we want to take a
+      # private unredacted copy before that happens for #[] lookup in the
+      # future.
       @env = env.to_hash.dup.freeze
 
-      parse_registered_variables(env)
+      parse_variables(internal_variables + variables, env)
 
       # Sadly, we can't setup the logger until we know *how* to setup the
       # logger, which requires parsing config variables
@@ -25,17 +26,17 @@ class ServiceSkeleton
     end
 
     def [](k)
-      @env[k]
+      @env[k].dup
     end
 
     private
 
-    def parse_registered_variables(env)
-      (@svc.registered_variables || []).map do |var|
+    def parse_variables(variables, env)
+      variables.map do |var|
         var[:class].new(var[:name], env, **var[:opts])
       end.each do |var|
         val = var.value
-        method_name = var.method_name(@svc.service_name).to_sym
+        method_name = var.method_name(@service_name).to_sym
 
         define_singleton_method(method_name) do
           val
@@ -65,30 +66,35 @@ class ServiceSkeleton
 
       @logger = Logger.new(log_file || $stderr, shift_age, shift_size)
 
-      if self.logstash_server && !self.logstash_server.empty?
-        loggerstash = Loggerstash.new(logstash_server: logstash_server, logger: @logger)
-        loggerstash.metrics_registry = @svc.metrics
-        loggerstash.attach(@logger)
-      end
-
-      thread_id_map = {}
       if Thread.main
-        thread_id_map[Thread.main.object_id] = 0
+        Thread.main[:thread_map_number] = 0
       else
         #:nocov:
-        thread_id_map[Thread.current.object_id] = 0
+        Thread.current[:thread_map_number] = 0
         #:nocov:
       end
 
+      thread_map_mutex = Mutex.new
+
       @logger.formatter = ->(s, t, p, m) do
-        th_n = thread_id_map[Thread.current.object_id] || (thread_id_map[Thread.current.object_id] = thread_id_map.length)
+        th_n = if Thread.current.name
+          #:nocov:
+          Thread.current.name
+          #:nocov:
+        else
+          thread_map_mutex.synchronize do
+            Thread.current[:thread_map_number] ||= begin
+              Thread.list.select { |th| th[:thread_map_number] }.length
+            end
+          end
+        end
 
         ts = log_enable_timestamps ? "#{t.utc.strftime("%FT%T.%NZ")} " : ""
         "#{ts}#{$$}##{th_n} #{s[0]} [#{p}] #{m}\n"
       end
 
       @logger.filters = []
-      @env.fetch("#{@svc.service_name.upcase}_LOG_LEVEL", "INFO").split(/\s*,\s*/).each do |spec|
+      @env.fetch("#{@service_name.upcase}_LOG_LEVEL", "INFO").split(/\s*,\s*/).each do |spec|
         if spec.index("=")
           # "Your developers were so preoccupied with whether or not they
           # could, they didn't stop to think if they should."
@@ -110,6 +116,18 @@ class ServiceSkeleton
           end
         end
       end
+    end
+
+    def internal_variables
+      [
+        { name: "#{@service_name.upcase}_LOG_LEVEL",             class: ConfigVariable::String,  opts: { default: "INFO" } },
+        { name: "#{@service_name.upcase}_LOG_ENABLE_TIMESTAMPS", class: ConfigVariable::Boolean, opts: { default: false } },
+        { name: "#{@service_name.upcase}_LOG_FILE",              class: ConfigVariable::String,  opts: { default: nil } },
+        { name: "#{@service_name.upcase}_LOG_MAX_FILE_SIZE",     class: ConfigVariable::Integer, opts: { default: 1048576, range: 0..Float::INFINITY } },
+        { name: "#{@service_name.upcase}_LOG_MAX_FILES",         class: ConfigVariable::Integer, opts: { default: 3,       range: 1..Float::INFINITY } },
+        { name: "#{@service_name.upcase}_LOGSTASH_SERVER",       class: ConfigVariable::String,  opts: { default: "" } },
+        { name: "#{@service_name.upcase}_METRICS_PORT",          class: ConfigVariable::Integer, opts: { default: nil,     range: 1..65535 } },
+      ]
     end
   end
 end

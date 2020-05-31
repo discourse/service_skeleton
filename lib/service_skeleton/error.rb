@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-class ServiceSkeleton
+module ServiceSkeleton
   class Error < StandardError
-    class InvalidEnvironmentError < Error; end
     class CannotSanitizeEnvironmentError < Error; end
-    class InheritanceContractError < Error; end
+    class InvalidEnvironmentError < Error; end
     class InvalidMetricNameError < Error; end
+    class InvalidServiceClassError < Error; end
   end
 end

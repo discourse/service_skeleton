@@ -1,21 +1,17 @@
 # frozen_string_literal: true
 
-require_relative "./spec_helper"
-require_relative "./spec_service"
+require_relative "../../spec_helper"
+require_relative "../../spec_service"
 
 require "service_skeleton"
 require "service_skeleton/config"
 require "service_skeleton/error"
 
 describe ServiceSkeleton::Config do
-  let(:env)    { {} }
-  let(:svc)    { SpecService.new({}) }
-  let(:vars)   { [] }
-  let(:config) { ServiceSkeleton::Config.new(env, svc) }
-
-  before(:each) do
-    allow(svc).to receive(:registered_variables).with(no_args).and_return(svc.class.registered_variables + vars)
-  end
+  let(:env)          { {} }
+  let(:service_name) { "SPEC_SERVICE" }
+  let(:variables)    { [] }
+  let(:config)       { ServiceSkeleton::Config.new(env, service_name, variables) }
 
   describe "#logger" do
     it "returns a logger" do
@@ -42,18 +38,6 @@ describe ServiceSkeleton::Config do
       expect(Loggerstash).to_not receive(:new)
 
       config.logger
-    end
-
-    context "with a logstash server set" do
-      let(:env) { { "SPEC_SERVICE_LOGSTASH_SERVER" => "logstash.example.com:5151" } }
-
-      it "configures loggerstash" do
-        expect(Loggerstash).to receive(:new).with(logstash_server: "logstash.example.com:5151", logger: an_instance_of(Logger)).and_return(mock_loggerstash = instance_double(Loggerstash))
-        expect(mock_loggerstash).to receive(:metrics_registry=).with(an_instance_of(Prometheus::Client::Registry)).ordered
-        expect(mock_loggerstash).to receive(:attach).with(an_instance_of(Logger)).ordered
-
-        config.logger
-      end
     end
 
     context "with LOG_LEVEL set to a single severity" do
@@ -149,12 +133,19 @@ describe ServiceSkeleton::Config do
   end
 
   context "with defined variables" do
-    let(:vars) do
-      [
-        { name: :XYZZY,            class: ServiceSkeleton::ConfigVariable::Integer, opts: { default: 42 } },
-        { name: :SPEC_SERVICE_VAR, class: ServiceSkeleton::ConfigVariable::String,  opts: { default: "ohai!" } },
-      ]
+    let(:svc_class) do
+      Class.new do |k|
+        # This is an annoyingly roundabout way of naming a class
+        ::DvService = k
+        Object.__send__(:remove_const, :DvService)
+
+        k.include ServiceSkeleton
+        k.integer :XYZZY,          default: 42
+        k.string  :DV_SERVICE_VAR, default: "ohai!"
+      end
     end
+    let(:service_name) { svc_class.service_name }
+    let(:variables)    { svc_class.registered_variables }
 
     it "defines a method which returns the variable's value" do
       expect(config.xyzzy).to eq(42)
@@ -171,27 +162,24 @@ describe ServiceSkeleton::Config do
   end
 
   context "with sensitive variables" do
-    let(:vars) do
-      [
-        { name: :SEKRIT, class: ServiceSkeleton::ConfigVariable::String, opts: { sensitive: true } },
-      ]
-    end
-
-    it "redacts the variables from the ENV" do
-      env = {
+    let(:env) do
+      {
         "SEKRIT" => "x",
         "PUBLIC" => "y",
       }
+    end
+    let(:variables) { [{ class: ServiceSkeleton::ConfigVariable::String, name: "SEKRIT", opts: { sensitive: true } }] }
 
+    it "redacts the variables from the ENV" do
       with_overridden_constant Object, :ENV, env do
-        ServiceSkeleton::Config.new(env, svc)
+        config
 
         expect(env).to eq("SEKRIT" => "*SENSITIVE*", "PUBLIC" => "y")
       end
     end
 
     it "freaks out if it doesn't have the real ENV" do
-      expect { ServiceSkeleton::Config.new({ "SEKRIT" => "x" }, svc) }.to raise_error(ServiceSkeleton::Error::CannotSanitizeEnvironmentError)
+      expect { config }.to raise_error(ServiceSkeleton::Error::CannotSanitizeEnvironmentError)
     end
   end
 end
