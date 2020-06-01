@@ -14,7 +14,7 @@ describe Ultravisor do
 
 		context "when the ultravisor isn't running" do
 			it "creates a new Child object" do
-				expect(Ultravisor::Child).to receive(:new).with(id: :xtra, klass: Class, method: :to_s)
+				expect(Ultravisor::Child).to receive(:new).with(id: :xtra, klass: Class, method: :to_s, logger: instance_of(Logger))
 
 				ultravisor.add_child(id: :xtra, klass: Class, method: :to_s)
 			end
@@ -49,7 +49,7 @@ describe Ultravisor do
 			end
 
 			it "creates a new Child object" do
-				expect(Ultravisor::Child).to receive(:new).with(id: :xtra, klass: Class, method: :to_s)
+				expect(Ultravisor::Child).to receive(:new).with(id: :xtra, klass: Class, method: :to_s, logger: instance_of(Logger))
 
 				ultravisor.add_child(id: :xtra, klass: Class, method: :to_s)
 			end

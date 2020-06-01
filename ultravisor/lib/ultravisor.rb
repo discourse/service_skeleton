@@ -34,13 +34,16 @@ class Ultravisor
 
 			@queue.clear
 			@running_thread = Thread.current
+			Thread.current.name = "Ultravisor"
 		end
 
+		logger.debug(logloc) { "Going to start children #{@children.map(&:first).inspect}" }
 		@children.each { |c| c.last.spawn(@queue) }
 
 		process_events
 
 		@op_m.synchronize do
+			logger.debug(logloc) { "Shutdown time for #{@children.reverse.map(&:first).inspect}" }
 			@children.reverse.each { |c| c.last.shutdown }
 
 			@running_thread = nil
@@ -72,9 +75,12 @@ class Ultravisor
 		@children.assoc(id)&.last
 	end
 
-	def add_child(*args)
+	def add_child(**args)
+		logger.debug(logloc) { "Adding child #{args[:id].inspect}" }
+		args[:logger] ||= logger
+
 		@op_m.synchronize do
-			c = Ultravisor::Child.new(*args)
+			c = Ultravisor::Child.new(**args)
 
 			if @children.assoc(c.id)
 				raise DuplicateChildError,
@@ -84,12 +90,15 @@ class Ultravisor
 			@children << [c.id, c]
 
 			if @running_thread
+				logger.debug(logloc) { "Auto-starting new child #{args[:id].inspect}" }
 				c.spawn(@queue)
 			end
 		end
 	end
 
 	def remove_child(id)
+		logger.debug(logloc) { "Removing child #{id.inspect}" }
+
 		@op_m.synchronize do
 			c = @children.assoc(id)
 
@@ -97,6 +106,7 @@ class Ultravisor
 
 			@children.delete(c)
 			if @running_thread
+				logger.debug(logloc) { "Shutting down removed child #{id.inspect}" }
 				c.last.shutdown
 			end
 		end
@@ -120,7 +130,8 @@ class Ultravisor
 		@children = []
 
 		children.each do |cfg|
-			c = Ultravisor::Child.new(cfg)
+			cfg[:logger] ||= logger
+			c = Ultravisor::Child.new(**cfg)
 			if @children.assoc(c.id)
 				raise DuplicateChildError,
 				      "Duplicate child ID: #{c.id.inspect}"
@@ -133,12 +144,13 @@ class Ultravisor
 	def process_events
 		loop do
 			qe = @queue.pop
-			logger.debug(logloc) { "Received queue entry #{qe.inspect}" }
 
 			case qe
 			when Ultravisor::Child
+				logger.debug(logloc) { "Received Ultravisor::Child queue entry for #{qe.id}" }
 				@op_m.synchronize { child_exited(qe) }
 			when :shutdown
+				logger.debug(logloc) { "Received :shutdown queue entry" }
 				break
 			else
 				logger.error(logloc) { "Unknown queue entry: #{qe.inspect}" }
@@ -152,6 +164,7 @@ class Ultravisor
 		end
 
 		if @running_thread.nil?
+			logger.debug(logloc) { "Child termination after shutdown" }
 			# Child termination processed after we've shut down... nope
 			return
 		end

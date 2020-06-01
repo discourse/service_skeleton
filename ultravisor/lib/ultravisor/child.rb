@@ -26,6 +26,7 @@ class Ultravisor
 		               enable_castcall: false,
 		               access: nil
 		              )
+
 			@logger = logger
 			@id = id
 
@@ -65,9 +66,12 @@ class Ultravisor
 
 				Thread.handle_interrupt(::Exception => :never, ::Numeric => :never) do
 					@thread = Thread.new do
-						Thread.current.name = @id.to_s
+						Thread.current.name = "Ultravisor::Child(#{@id})"
+						logger.debug(logloc) { "Spawning new instance of #{@id}" }
+
 						begin
 							Thread.handle_interrupt(::Exception => :immediate, ::Numeric => :immediate) do
+								logger.debug(logloc) { "Calling #{@klass}##{@method} to start #{@id} running" }
 								@value = @instance.public_send(@method)
 							end
 						rescue Exception => ex
@@ -110,7 +114,12 @@ class Ultravisor
 				end
 
 				if @shutdown_spec[:method] && !force
-					@instance.public_send(@shutdown_spec[:method])
+					begin
+						@instance.public_send(@shutdown_spec[:method])
+					rescue Exception => ex
+						log_exception(ex) { "Unhandled exception when calling #{@shutdown_spec[:method].inspect} on child #{id}" }
+						th.kill
+					end
 				else
 					th.kill
 				end
@@ -397,14 +406,15 @@ class Ultravisor
 
 		def blown_policy?
 			cumulative_runtime = 0
-			recent_restart_count = 0
+			# This starts at 1 because we only check this during a restart, so
+			# by definition there must have been at least one recent restart
+			recent_restart_count = 1
 
-			@runtime_history.each_with_index do |t, i|
+			@runtime_history.each do |t|
 				cumulative_runtime += t
 
-				if cumulative_runtime > @restart_policy[:period]
-					recent_restart_count = i + 1
-					break
+				if cumulative_runtime < @restart_policy[:period]
+					recent_restart_count += 1
 				end
 			end
 
