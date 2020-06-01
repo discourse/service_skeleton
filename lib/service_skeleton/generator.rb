@@ -84,7 +84,7 @@ module ServiceSkeleton
     end
 
     def initialize_signals(ultravisor, config, service_signals, metrics_registry)
-      counter = metrics_registry.counter(:"#{config.service_name}_signals_handled_total", "How many of each signal have been handled")
+      counter = metrics_registry.counter(:"#{config.service_name}_signals_handled_total", docstring: "How many of each signal have been handled", labels: %i{signal})
 
       ultravisor.add_child(
         id: :signal_manager,

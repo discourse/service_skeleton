@@ -103,7 +103,7 @@ module ServiceSkeleton
       if @registry.has_key?(char.ord)
         handler = @registry[char.ord]
         logger.debug(logloc) { "#{handler.signame} received" }
-        @signal_counter.increment(signal: handler.signame.to_s)
+        @signal_counter.increment(labels: { signal: handler.signame.to_s })
 
         begin
           handler.call

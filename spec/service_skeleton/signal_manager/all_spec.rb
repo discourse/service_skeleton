@@ -102,7 +102,7 @@ describe ServiceSkeleton::SignalManager do
       end
 
       it "increments the counter" do
-        expect(counter).to receive(:increment).with(signal: "INT")
+        expect(counter).to receive(:increment).with(labels: { signal: "INT" })
 
         sm.__send__(:handle_signal, Signal.list["INT"].chr)
       end
@@ -121,7 +121,7 @@ describe ServiceSkeleton::SignalManager do
       end
 
       it "increments the counter" do
-        expect(counter).to receive(:increment).with(signal: "INT")
+        expect(counter).to receive(:increment).with(labels: { signal: "INT" })
 
         sm.__send__(:handle_signal, Signal.list["INT"].chr)
       end

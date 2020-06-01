@@ -536,7 +536,7 @@ such a metric like this:
 
       string :GENERIC_HELLO_SERVICE_RECIPIENT, matches: /\A\w+\z/
 
-      counter :greetings_total, "How many greetings we have sent"
+      counter :greetings_total, docstring: "How many greetings we have sent", labels: %i{recipient}
 
       # ...
 
@@ -549,12 +549,12 @@ to increment our greeting counter, you simply do:
 
       string :GENERIC_HELLO_SERVICE_RECIPIENT, matches: /\A\w+\z/
 
-      counter :greetings_total, "How many greetings we have sent"
+      counter :greetings_total, docstring: "How many greetings we have sent", labels: %i{recipient}
 
       def run
         loop do
           puts "Hello, #{config.recipient}!"
-          metrics.greetings_total.increment(recipient: config.recipient)
+          metrics.greetings_total.increment(labels: { recipient: config.recipient })
           sleep 1
         end
       end
@@ -570,12 +570,12 @@ before defining the metric accessor method, which keeps typing to a minimum:
 
       string :GENERIC_HELLO_SERVICE_RECIPIENT, matches: /\A\w+\z/
 
-      counter :generic_hello_service_greetings_total, "How many greetings we have sent"
+      counter :generic_hello_service_greetings_total, docstring: "How many greetings we have sent", labels: %i{recipient}
 
       def run
         loop do
           puts "Hello, #{config.recipient}!"
-          metrics.greetings_total.increment(recipient: config.recipient)
+          metrics.greetings_total.increment(labels: { recipient: config.recipient })
           sleep 1
         end
       end

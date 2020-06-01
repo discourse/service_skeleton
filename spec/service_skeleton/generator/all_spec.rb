@@ -190,8 +190,8 @@ describe ServiceSkeleton::Generator do
       let(:metrics)   { svc_class.registered_metrics }
 
       before(:each) do
-        svc_class.counter(:ohai, "Say hi!")
-        svc_class.counter(:"#{service_name}_ping", "Ping!")
+        svc_class.counter(:ohai, docstring: "Say hi!")
+        svc_class.counter(:"#{service_name}_ping", docstring: "Ping!")
       end
 
       it "defines prefixless accessor methods" do
@@ -202,13 +202,13 @@ describe ServiceSkeleton::Generator do
       end
 
       it "explodes if multiple metrics result in the same name" do
-        svc_class.gauge(:"#{service_name}_ohai", "Hey again!")
+        svc_class.gauge(:"#{service_name}_ohai", docstring: "Hey again!")
 
         expect { generate }.to raise_error(ServiceSkeleton::Error::InvalidMetricNameError)
       end
 
       it "explodes if a metric method name conflicts with an existing method name" do
-        svc_class.histogram(:"#{service_name}_counter", "Ah ah ah!")
+        svc_class.histogram(:"#{service_name}_counter", docstring: "Ah ah ah!")
 
         expect { generate }.to raise_error(ServiceSkeleton::Error::InvalidMetricNameError)
       end
