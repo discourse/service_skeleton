@@ -32,7 +32,7 @@ Gem::Specification.new do |s|
 
   s.required_ruby_version = ">= 2.5.0"
 
-  s.add_runtime_dependency "frankenstein", "~> 1.2.0.3.a"
+  s.add_runtime_dependency "frankenstein", "~> 2.0"
   s.add_runtime_dependency "loggerstash", ">= 0.0.9", "< 1"
   s.add_runtime_dependency "prometheus-client", "~> 2.0"
   s.add_runtime_dependency "sigdump", "~> 0.2"
