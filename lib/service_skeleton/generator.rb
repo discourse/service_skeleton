@@ -93,7 +93,7 @@ module ServiceSkeleton
         args: [
           logger: config.logger,
           counter: counter,
-          signals: global_signals(ultravisor) + wrap_service_signals(service_signals, ultravisor),
+          signals: global_signals(ultravisor, config.logger) + wrap_service_signals(service_signals, ultravisor),
         ],
         shutdown: {
           method: :shutdown,
@@ -102,7 +102,7 @@ module ServiceSkeleton
       )
     end
 
-    def global_signals(ultravisor)
+    def global_signals(ultravisor, logger)
       # For mysterious reasons of mystery, simplecov doesn't recognise these
       # procs as being called, even though there are definitely tests for
       # them.  So...
