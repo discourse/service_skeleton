@@ -244,7 +244,7 @@ variables:
     class GenericHelloService
       include ServiceSkeleton
 
-      string :RECIPIENT, matches: /\A\w+\z/
+      string :RECIPIENT, match: /\A\w+\z/
 
       def run
         loop do
@@ -268,7 +268,7 @@ default for a config variable, like so:
     class GenericHelloService
       include ServiceSkeleton
 
-      string :RECIPIENT, matches: /\a\w+\z/, default: "Anonymous Coward"
+      string :RECIPIENT, match: /\a\w+\z/, default: "Anonymous Coward"
 
       # ...
 
@@ -299,7 +299,7 @@ extending the above example a little more, you could do something like this:
     class GenericHelloService
       include ServiceSkeleton
 
-      string :GENERIC_HELLO_SERVICE_RECIPIENT, matches: /\A\w+\z/
+      string :GENERIC_HELLO_SERVICE_RECIPIENT, match: /\A\w+\z/
 
       def run
         loop do
@@ -534,7 +534,7 @@ such a metric like this:
     class GenericHelloService
       include ServiceSkeleton
 
-      string :GENERIC_HELLO_SERVICE_RECIPIENT, matches: /\A\w+\z/
+      string :GENERIC_HELLO_SERVICE_RECIPIENT, match: /\A\w+\z/
 
       counter :greetings_total, docstring: "How many greetings we have sent", labels: %i{recipient}
 
@@ -547,7 +547,7 @@ to increment our greeting counter, you simply do:
     class GenericHelloService
       include ServiceSkeleton
 
-      string :GENERIC_HELLO_SERVICE_RECIPIENT, matches: /\A\w+\z/
+      string :GENERIC_HELLO_SERVICE_RECIPIENT, match: /\A\w+\z/
 
       counter :greetings_total, docstring: "How many greetings we have sent", labels: %i{recipient}
 
@@ -568,7 +568,7 @@ before defining the metric accessor method, which keeps typing to a minimum:
     class GenericHelloService
       include ServiceSkeleton
 
-      string :GENERIC_HELLO_SERVICE_RECIPIENT, matches: /\A\w+\z/
+      string :GENERIC_HELLO_SERVICE_RECIPIENT, match: /\A\w+\z/
 
       counter :generic_hello_service_greetings_total, docstring: "How many greetings we have sent", labels: %i{recipient}
 
