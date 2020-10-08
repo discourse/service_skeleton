@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module ServiceSkeleton
   module UltravisorChildren
     def register_ultravisor_children(ultravisor, config:, metrics_registry:)
