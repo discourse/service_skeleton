@@ -8,7 +8,8 @@ module ServiceSkeleton
           id: self.service_name.to_sym,
           klass: self,
           method: :run,
-          args: [config: config, metrics: metrics_registry]
+          args: [config: config, metrics: metrics_registry],
+          access: :unsafe
         )
       rescue Ultravisor::InvalidKAMError
         raise ServiceSkeleton::Error::InvalidServiceClassError,
