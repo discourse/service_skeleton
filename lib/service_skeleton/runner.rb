@@ -33,8 +33,8 @@ module ServiceSkeleton
     end
 
     def run
-      logger.info(logloc) { "Starting service #{@config.service_name}" }
-      logger.info(logloc) { (["Environment:"] + @config.env.map { |k, v| "#{k}=#{v.inspect}" }).join("\n  ") }
+      @config.pre_logger.info(logloc) { "Starting service #{@config.service_name}" }
+      @config.pre_logger.info(logloc) { (["Environment:"] + @config.env.map { |k, v| "#{k}=#{v.inspect}" }).join("\n  ") }
 
       @ultravisor.run
     end
