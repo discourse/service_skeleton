@@ -8,7 +8,7 @@ require "loggerstash"
 
 module ServiceSkeleton
   class Config
-    attr_reader :logger, :pre_logger, :env, :service_name
+    attr_reader :logger, :pre_run_logger, :env, :service_name
 
     def initialize(env, service_name, variables)
       @service_name = service_name
@@ -68,8 +68,8 @@ module ServiceSkeleton
 
       # Can be used prior to a call to ultravisor#run. This prevents a race condition
       # when a logstash server is configured but the logstash writer is not yet
-      # initialised.
-      @pre_logger = Logger.new(log_file || $stderr, shift_age, shift_size)
+      # initialised. This should never be updated after it is configured.
+      @pre_run_logger = Logger.new(log_file || $stderr, shift_age, shift_size)
 
       if Thread.main
         Thread.main[:thread_map_number] = 0
@@ -81,7 +81,7 @@ module ServiceSkeleton
 
       thread_map_mutex = Mutex.new
 
-      [@logger, @pre_logger].each do |logger|
+      [@logger, @pre_run_logger].each do |logger|
         logger.formatter = ->(s, t, p, m) do
           th_n = if Thread.current.name
             #:nocov:
