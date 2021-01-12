@@ -45,7 +45,7 @@ module ServiceSkeleton
       end
 
       if config.metrics_port
-        config.logger.info(config.service_name) { "Starting metrics server on port #{config.metrics_port}" }
+        config.pre_run_logger.info(config.service_name) { "Starting metrics server on port #{config.metrics_port}" }
         ultravisor.add_child(
           id: :metrics_server,
           klass: Frankenstein::Server,
@@ -62,7 +62,7 @@ module ServiceSkeleton
 
     def initialize_loggerstash(ultravisor, config, registry)
       if config.logstash_server && !config.logstash_server.empty?
-        config.logger.info(config.service_name) { "Configuring loggerstash to send to #{config.logstash_server}" }
+        config.pre_run_logger.info(config.service_name) { "Configuring loggerstash to send to #{config.logstash_server}" }
 
         ultravisor.add_child(
           id: :logstash_writer,

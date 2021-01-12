@@ -19,8 +19,7 @@ describe ServiceSkeleton::Config do
     end
 
     it "logs to stderr" do
-      expect(Logger).to receive(:new).with($stderr, 3, 1048576).and_call_original
-
+      expect(Logger).to receive(:new).twice.with($stderr, 3, 1048576).and_call_original
       config
     end
 
@@ -87,7 +86,7 @@ describe ServiceSkeleton::Config do
       let(:env) { { "SPEC_SERVICE_LOG_FILE" => "/var/log/spec_service.log" } }
 
       it "configures the logger appropriately" do
-        expect(Logger::LogDevice).to receive(:new).with("/var/log/spec_service.log", include(shift_age: 3, shift_size: 1048576))
+        expect(Logger::LogDevice).to receive(:new).twice.with("/var/log/spec_service.log", include(shift_age: 3, shift_size: 1048576))
 
         config
       end
@@ -97,7 +96,7 @@ describe ServiceSkeleton::Config do
       let(:env) { { "SPEC_SERVICE_LOG_MAX_FILE_SIZE" => "1234567" } }
 
       it "configures the logger appropriately" do
-        expect(Logger::LogDevice).to receive(:new).with($stderr, include(shift_age: 3, shift_size: 1234567))
+        expect(Logger::LogDevice).to receive(:new).twice.with($stderr, include(shift_age: 3, shift_size: 1234567))
 
         config
       end
@@ -107,7 +106,7 @@ describe ServiceSkeleton::Config do
       let(:env) { { "SPEC_SERVICE_LOG_MAX_FILE_SIZE" => "0" } }
 
       it "configures the logger appropriately" do
-        expect(Logger::LogDevice).to receive(:new).with($stderr, include(shift_age: 0, shift_size: 0))
+        expect(Logger::LogDevice).to receive(:new).twice.with($stderr, include(shift_age: 0, shift_size: 0))
 
         config
       end
@@ -117,7 +116,7 @@ describe ServiceSkeleton::Config do
       let(:env) { { "SPEC_SERVICE_LOG_MAX_FILES" => "42" } }
 
       it "configures the logger appropriately" do
-        expect(Logger::LogDevice).to receive(:new).with($stderr, include(shift_age: 42, shift_size: 1048576))
+        expect(Logger::LogDevice).to receive(:new).twice.with($stderr, include(shift_age: 42, shift_size: 1048576))
 
         config
       end

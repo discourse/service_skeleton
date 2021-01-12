@@ -8,7 +8,7 @@ require "loggerstash"
 
 module ServiceSkeleton
   class Config
-    attr_reader :logger, :env, :service_name
+    attr_reader :logger, :pre_run_logger, :env, :service_name
 
     def initialize(env, service_name, variables)
       @service_name = service_name
@@ -66,6 +66,11 @@ module ServiceSkeleton
 
       @logger = Logger.new(log_file || $stderr, shift_age, shift_size)
 
+      # Can be used prior to a call to ultravisor#run. This prevents a race condition
+      # when a logstash server is configured but the logstash writer is not yet
+      # initialised. This should never be updated after it is configured.
+      @pre_run_logger = Logger.new(log_file || $stderr, shift_age, shift_size)
+
       if Thread.main
         Thread.main[:thread_map_number] = 0
       else
@@ -76,21 +81,23 @@ module ServiceSkeleton
 
       thread_map_mutex = Mutex.new
 
-      @logger.formatter = ->(s, t, p, m) do
-        th_n = if Thread.current.name
-          #:nocov:
-          Thread.current.name
-          #:nocov:
-        else
-          thread_map_mutex.synchronize do
-            Thread.current[:thread_map_number] ||= begin
-              Thread.list.select { |th| th[:thread_map_number] }.length
+      [@logger, @pre_run_logger].each do |logger|
+        logger.formatter = ->(s, t, p, m) do
+          th_n = if Thread.current.name
+            #:nocov:
+            Thread.current.name
+            #:nocov:
+          else
+            thread_map_mutex.synchronize do
+              Thread.current[:thread_map_number] ||= begin
+                Thread.list.select { |th| th[:thread_map_number] }.length
+              end
             end
           end
-        end
 
-        ts = log_enable_timestamps ? "#{t.utc.strftime("%FT%T.%NZ")} " : ""
-        "#{ts}#{$$}##{th_n} #{s[0]} [#{p}] #{m}\n"
+          ts = log_enable_timestamps ? "#{t.utc.strftime("%FT%T.%NZ")} " : ""
+          "#{ts}#{$$}##{th_n} #{s[0]} [#{p}] #{m}\n"
+        end
       end
 
       @logger.filters = []
