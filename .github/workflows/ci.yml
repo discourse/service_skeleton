@@ -5,6 +5,8 @@ on:
   push:
     branches:
       - master
+    tags:
+      - v*
 
 jobs:
   build:
@@ -34,3 +36,13 @@ jobs:
         run: bundle exec rubocop
       - name: Tests
         run: bundle exec rspec
+  publish:
+    if: contains(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Release GEm
+        uses: CvX/publish-rubygems-action@master
+        env:
+          RUBYGEMS_API_KEY: ${{secrets.RUBYGEMS_API_KEY}}
