@@ -1,48 +1,49 @@
+# frozen_string_literal: true
 require_relative "../spec_helper"
 
 require_relative "../../lib/ultravisor"
 
 describe Ultravisor do
-	let(:args) { {} }
-	let(:ultravisor) { Ultravisor.new(**args) }
-	let(:mock_child) { instance_double(Ultravisor::Child) }
+  let(:args) { {} }
+  let(:ultravisor) { Ultravisor.new(**args) }
+  let(:mock_child) { instance_double(Ultravisor::Child) }
 
-	describe "#remove_child" do
-		before(:each) do
-			ultravisor.instance_variable_set(:@children, [[:lamb, mock_child]])
-		end
+  describe "#remove_child" do
+    before(:each) do
+      ultravisor.instance_variable_set(:@children, [[:lamb, mock_child]])
+    end
 
-		context "when the ultravisor isn't running" do
-			it "removes the child from the list of children" do
-				ultravisor.remove_child(:lamb)
+    context "when the ultravisor isn't running" do
+      it "removes the child from the list of children" do
+        ultravisor.remove_child(:lamb)
 
-				expect(ultravisor[:lamb]).to be(nil)
-			end
+        expect(ultravisor[:lamb]).to be(nil)
+      end
 
-			it "doesn't explode if asked to remove a child that doesn't exist" do
-				expect { ultravisor.remove_child(:no_such_child) }.to_not raise_error
-			end
-		end
+      it "doesn't explode if asked to remove a child that doesn't exist" do
+        expect { ultravisor.remove_child(:no_such_child) }.to_not raise_error
+      end
+    end
 
-		context "while the ultravisor is running" do
-			let(:mock_thread) { instance_double(Thread) }
+    context "while the ultravisor is running" do
+      let(:mock_thread) { instance_double(Thread) }
 
-			before(:each) do
-				allow(mock_child).to receive(:shutdown)
-				ultravisor.instance_variable_set(:@running_thread, mock_thread)
-			end
+      before(:each) do
+        allow(mock_child).to receive(:shutdown)
+        ultravisor.instance_variable_set(:@running_thread, mock_thread)
+      end
 
-			it "shuts down the child" do
-				expect(mock_child).to receive(:shutdown)
+      it "shuts down the child" do
+        expect(mock_child).to receive(:shutdown)
 
-				ultravisor.remove_child(:lamb)
-			end
+        ultravisor.remove_child(:lamb)
+      end
 
-			it "removes the child from the list of children" do
-				ultravisor.remove_child(:lamb)
+      it "removes the child from the list of children" do
+        ultravisor.remove_child(:lamb)
 
-				expect(ultravisor[:lamb]).to be(nil)
-			end
-		end
-	end
+        expect(ultravisor[:lamb]).to be(nil)
+      end
+    end
+  end
 end
