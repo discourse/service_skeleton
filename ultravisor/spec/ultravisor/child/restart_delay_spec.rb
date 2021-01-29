@@ -2,7 +2,7 @@
 
 require_relative "../../spec_helper"
 
-require "ultravisor/child"
+require_relative "../../../lib/ultravisor/child"
 
 describe Ultravisor::Child do
 	let(:base_args) { { id: :bob, klass: mock_class, method: :run } }

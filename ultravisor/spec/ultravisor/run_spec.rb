@@ -1,6 +1,6 @@
 require_relative "../spec_helper"
 
-require "ultravisor"
+require_relative "../../lib/ultravisor"
 
 describe Ultravisor do
 	uses_logger

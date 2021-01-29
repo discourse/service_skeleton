@@ -36,6 +36,8 @@ jobs:
         run: bundle exec rubocop
       - name: Tests
         run: bundle exec rspec
+      - name: Ultravisor Tests
+        run: bundle exec rspec ultravisor/spec
   publish:
     if: contains(github.ref, 'refs/tags/v')
     needs: build

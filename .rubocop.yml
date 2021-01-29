@@ -5,5 +5,9 @@ inherit_mode:
   merge:
     - Exclude
 
+AllCops:
+  Exclude:
+    - 'ultravisor/**/*'
+
 RSpec/MessageSpies:
   EnforcedStyle: receive

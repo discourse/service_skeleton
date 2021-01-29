@@ -2,8 +2,8 @@
 
 require_relative "../../spec_helper"
 
-require "ultravisor/child"
-require "ultravisor/error"
+require_relative "../../../lib/ultravisor/child"
+require_relative "../../../lib/ultravisor/error"
 
 describe Ultravisor::Child do
 	let(:child) { Ultravisor::Child.new(**args) }

@@ -12,25 +12,6 @@ will feel familiar to you, because I stole pretty much every good idea that
 is in Ultravisor from Erlang.  You will get a lot of very excellent insight
 from reading [the Erlang/OTP Supervision Principles](http://erlang.org/doc/design_principles/sup_princ.html).
 
-
-# Installation
-
-It's a gem:
-
-    gem install ultravisor
-
-There's also the wonders of [the Gemfile](http://bundler.io):
-
-    gem 'ultravisor'
-
-If you're the sturdy type that likes to run from git:
-
-    rake install
-
-Or, if you've eschewed the convenience of Rubygems entirely, then you
-presumably know what to do already.
-
-
 # Usage
 
 This section gives you a basic overview of the high points of how Ultravisor
@@ -421,31 +402,3 @@ Ultravisor child is that an Ultravisor's `shutdown` policy is automatically set
 to `method: :stop!, timeout: :infinity`.  This is because it is *very* bad news
 to forcibly terminate an Ultravisor before its children have stopped -- all
 those children just get cast into the VM, never to be heard from again.
-
-
-# Contributing
-
-Bug reports should be sent to the [Github issue
-tracker](https://github.com/mpalmer/ultravisor/issues), or
-[e-mailed](mailto:theshed+ultravisor@hezmatt.org).  Patches can be sent as a
-Github pull request, or [e-mailed](mailto:theshed+ultravisor@hezmatt.org).
-
-
-# Licence
-
-Unless otherwise stated, everything in this repo is covered by the following
-copyright notice:
-
-    Copyright (C) 2019  Matt Palmer <matt@hezmatt.org>
-
-    This program is free software: you can redistribute it and/or modify it
-    under the terms of the GNU General Public License version 3, as
-    published by the Free Software Foundation.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.

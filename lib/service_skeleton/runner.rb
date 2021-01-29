@@ -10,7 +10,7 @@ require "frankenstein/process_metrics"
 require "frankenstein/server"
 require "prometheus/client/registry"
 require "sigdump"
-require "ultravisor"
+require_relative "../../ultravisor/lib/ultravisor"
 
 module ServiceSkeleton
   class Runner
