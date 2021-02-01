@@ -17,6 +17,8 @@ jobs:
         ruby: ["2.5", "2.6", "2.7"]
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Fetch all history. Needed for `git describe`
       - uses: actions/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby }}
