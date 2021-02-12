@@ -448,8 +448,7 @@ portion is the all-uppercase [service name](#the-service-name).
 
         INFO,buggy=DEBUG,/noisy/i=ERROR
 
-  Logging levels can be changed at runtime, via [signals](#default-signals) or
-  [the HTTP admin interface](#http-admin-interface).
+  Logging levels can be changed at runtime via [signals](#default-signals).
 
 * **`<SERVICENAME>_LOGSTASH_SERVER`** (string; default `""`) -- if set to a
   non-empty string, we will engage the services of the [loggerstash
@@ -684,57 +683,6 @@ responsible for ensuring that whatever your handler does is concurrency-safe.
 
 When the service is shutdown, all signal handlers will be automatically
 unhooked, which saves you having to do it yourself.
-
-
-## HTTP Admin Interface
-
-In these modern times we live in, it seems everything from nuclear reactors to
-toasters can be controlled from a browser.  Why should your services be any
-different?
-
-
-### HTTP Admin Configuration
-
-In the spirit of "secure by default", you must explicitly enable the HTTP admin
-interface, and configure an authentication method.  To do that, use the
-following environment variables, where `<SERVICENAME>_` is the all-uppercase
-version of [the service name](#the-service-name).
-
-* **`<SERVICENAME>_HTTP_ADMIN_PORT`** (integer; range 1..65535; default: `""`)
-  -- if set to a valid port number (`1` to `65535` inclusive), the HTTP admin
-  interface will listen on that port, if also enabled by configuring
-  authentication.
-
-* **`<SERVICENAME>_HTTP_ADMIN_BASIC_AUTH`** (string; default: `""`) -- if set
-  to a string containing a username and password separated by a colon, then
-  authentication via [HTTP Basic auth](https://tools.ietf.org/html/rfc7617)
-  will be supported.  Note that in addition to this setting, an admin port must
-  also be specified in order for the admin interface to be enabled.
-
-* **`<SERVICENAME>_HTTP_ADMIN_PROXY_USERNAME_HEADER`** (string; default: `""`)
-  -- if set to a non-empty string, then incoming requests will be examined for
-  a HTTP header with the specified name.  If such a header exists and has a
-  non-empty value, then the request will be deemed to have been authenticated
-  by an upstream authenticating proxy (such as
-  [`discourse-auth-proxy`](https://github.com/discourse/discourse-auth-proxy))
-  as the user given in the header value.  Note that in addition to this
-  setting, an admin port must also be specified in order for the admin
-  interface to be enabled.
-
-
-### HTTP Admin Usage
-
-The HTTP admin interface provides both an interactive, browser-based mode,
-as well as a RESTful interface, which should, in general, provide equivalent
-functionality.
-
-* Visiting the service's `IP address:port` in a web browser will bring up an HTML
-  interface showing all the features that are available.  Usage should
-  (hopefully) be self-explanatory.
-
-* Visiting the service's `IP address:port` whilst accepting `application/json`
-  responses will provide a directory of links to available endpoints which you
-  can use to interact with the HTTP admin interface programmatically.
 
 
 # Contributing
