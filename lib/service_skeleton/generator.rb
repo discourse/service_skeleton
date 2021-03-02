@@ -16,8 +16,8 @@ module ServiceSkeleton
   module Generator
     def generate(config:, metrics_registry:, service_metrics:, service_signal_handlers:)
       Ultravisor.new(logger: config.logger).tap do |ultravisor|
-        initialize_metrics(ultravisor, config, metrics_registry, service_metrics)
         initialize_loggerstash(ultravisor, config, metrics_registry)
+        initialize_metrics(ultravisor, config, metrics_registry, service_metrics)
         initialize_signals(ultravisor, config, service_signal_handlers, metrics_registry)
       end
     end
