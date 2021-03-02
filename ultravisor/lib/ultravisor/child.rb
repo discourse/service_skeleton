@@ -185,13 +185,13 @@ class Ultravisor
       !!(@restart == :always || (@restart == :on_failure && termination_exception))
     end
 
-    def unsafe_instance
+    def unsafe_instance(wait: true)
       unless @access == :unsafe
         raise Ultravisor::ThreadSafetyError,
               "#unsafe_instance called on a child not declared with access: :unsafe"
       end
 
-      current_instance
+      current_instance(wait: wait)
     end
 
     def cast
@@ -394,9 +394,9 @@ class Ultravisor
       end
     end
 
-    def current_instance
+    def current_instance(wait: true)
       @spawn_m.synchronize do
-        while @instance.nil?
+        while wait && @instance.nil?
           @spawn_cv.wait(@spawn_m)
         end
 
