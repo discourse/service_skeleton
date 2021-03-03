@@ -3,10 +3,11 @@
 require_relative "./spec_helper"
 
 require "service_skeleton/filtering_logger"
+require "tempfile"
 
 describe FilteringLogger do
-  let(:logger) { Logger.new("/dev/null") }
-  let(:logdev) { logger.instance_variable_get(:@logdev) }
+  let(:logger) { Logger.new(logdev) }
+  let(:logdev) { Tempfile.new }
 
   it "accepts a filter spec" do
     expect { logger.filters = [["buggy", Logger::DEBUG], [/noisy/i, Logger::ERROR]] }.to_not raise_error

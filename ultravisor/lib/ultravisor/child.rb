@@ -381,6 +381,10 @@ class Ultravisor
       # urgh.
       if @klass.instance_method(:initialize).arity == 0
         @klass.new()
+      elsif @args.is_a?(Hash)
+        @klass.new(**@args)
+      elsif @args.last.is_a?(Hash)
+        @klass.new(*@args[0...-1], **@args.last)
       else
         @klass.new(*@args)
       end.tap do |i|
