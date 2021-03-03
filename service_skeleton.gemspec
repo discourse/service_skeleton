@@ -38,8 +38,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'rake'
   s.add_development_dependency 'redcarpet'
   s.add_development_dependency 'rspec'
-  s.add_development_dependency 'rubocop'
-  s.add_development_dependency 'rubocop-discourse'
+  s.add_development_dependency 'rubocop-discourse', '~> 2.4.1'
   s.add_development_dependency 'simplecov'
   s.add_development_dependency 'yard'
 end
