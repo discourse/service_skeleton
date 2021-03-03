@@ -93,14 +93,123 @@ describe Ultravisor::Child do
       end
     end
 
-    context "with a worker class that takes args" do
-      let(:args) { { id: :testy, klass: mock_class, args: ["foo", "bar", baz: "wombat"], method: :run } }
-      let(:mock_class) { Class.new.tap { |k| k.class_eval { def initialize(*x); end; def run; end } } }
+    context "with a worker class that takes only non-keyword args" do
+      let(:args) { { id: :testy, klass: mock_class, args: ["foo", "bar"], method: :run } }
+      let(:mock_class) do
+        Class.new do
+          def initialize(foo, bar)
+          end
+
+          def run
+          end
+        end
+      end
 
       it "creates the class instance with args" do
-        expect(mock_class).to receive(:new).with("foo", "bar", baz: "wombat").and_call_original
+        allow(mock_class).to receive(:new).and_call_original
 
         child.spawn(term_queue).wait
+        expect(mock_class).to have_received(:new).with("foo", "bar")
+      end
+    end
+
+    context "with a worker class that takes non-keyword and optional args" do
+      let(:args) { { id: :testy, klass: mock_class, args: ["foo", "bar", baz: "wombat"], method: :run } }
+      let(:mock_class) do
+        Class.new do
+          def initialize(foo, bar, baz = {})
+          end
+
+          def run
+          end
+        end
+      end
+
+      it "creates the class instance with args" do
+        allow(mock_class).to receive(:new).and_call_original
+
+        child.spawn(term_queue).wait
+        expect(mock_class).to have_received(:new).with("foo", "bar", { baz: "wombat" })
+      end
+    end
+
+    context "with a worker class that takes mixed args" do
+      let(:args) { { id: :testy, klass: mock_class, args: ["foo", "bar", baz: "wombat"], method: :run } }
+      let(:mock_class) do
+        Class.new do
+          def initialize(foo, bar, baz:)
+          end
+
+          def run
+          end
+        end
+      end
+
+      it "creates the class instance with args" do
+        allow(mock_class).to receive(:new).and_call_original
+
+        child.spawn(term_queue).wait
+        expect(mock_class).to have_received(:new).with("foo", "bar", baz: "wombat")
+      end
+    end
+
+    context "with a worker class that takes keyword args" do
+      let(:args) { { id: :testy, klass: mock_class, args: [foo: "bar", baz: "wombat"], method: :run } }
+      let(:mock_class) do
+        Class.new do
+          def initialize(foo:, baz:)
+          end
+
+          def run
+          end
+        end
+      end
+
+      it "creates the class instance with args" do
+        allow(mock_class).to receive(:new).and_call_original
+
+        child.spawn(term_queue).wait
+        expect(mock_class).to have_received(:new).with(foo: "bar", baz: "wombat")
+      end
+    end
+
+    context "with a worker class that takes optional args" do
+      let(:args) { { id: :testy, klass: mock_class, args: [foo: "bar", baz: "wombat", fib: "wib", woop: "woob"], method: :run } }
+      let(:mock_class) do
+        Class.new do
+          def initialize(foo:, baz:, fib: "none", woop: nil)
+          end
+
+          def run
+          end
+        end
+      end
+
+      it "creates the class instance with args" do
+        allow(mock_class).to receive(:new).and_call_original
+        child.spawn(term_queue).wait
+
+        expect(mock_class).to have_received(:new).with(foo: "bar", baz: "wombat", fib: "wib", woop: "woob")
+      end
+    end
+
+    context "with a worker class that takes keyword args in form of a hash" do
+      let(:args) { { id: :testy, klass: mock_class, args: { foo: "bar", baz: "wombat" }, method: :run } }
+      let(:mock_class) do
+        Class.new do
+          def initialize(foo:, baz:)
+          end
+
+          def run
+          end
+        end
+      end
+
+      it "creates the class instance with args" do
+        allow(mock_class).to receive(:new).and_call_original
+        child.spawn(term_queue).wait
+
+        expect(mock_class).to have_received(:new).with(foo: "bar", baz: "wombat")
       end
     end
   end
