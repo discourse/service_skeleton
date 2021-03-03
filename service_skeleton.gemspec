@@ -3,7 +3,7 @@
 Gem::Specification.new do |s|
   s.name = "service_skeleton"
 
-  s.version = '2.0.0'
+  s.version = '2.0.1'
 
   s.platform = Gem::Platform::RUBY
 
@@ -30,6 +30,7 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency "prometheus-client", "~> 2.0"
   s.add_runtime_dependency "sigdump", "~> 0.2"
   s.add_runtime_dependency "to_regexp", "~> 0.2"
+  s.add_runtime_dependency "webrick"
 
   s.add_development_dependency 'bundler'
   s.add_development_dependency 'guard-rspec'
@@ -38,8 +39,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'rake'
   s.add_development_dependency 'redcarpet'
   s.add_development_dependency 'rspec'
-  s.add_development_dependency 'rubocop'
-  s.add_development_dependency 'rubocop-discourse'
+  s.add_development_dependency 'rubocop-discourse', '~> 2.4.1'
   s.add_development_dependency 'simplecov'
   s.add_development_dependency 'yard'
 end
