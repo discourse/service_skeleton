@@ -9,8 +9,7 @@ end
 Gem::Specification.new do |s|
   s.name = "service_skeleton"
 
-  s.version = GVB.version rescue "0.0.0.1.NOGVB"
-  s.date    = GVB.date    rescue Time.now.strftime("%Y-%m-%d")
+  s.version = '1.0.4'
 
   s.platform = Gem::Platform::RUBY
 

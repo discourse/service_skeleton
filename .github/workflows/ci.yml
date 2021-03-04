@@ -1,52 +1,46 @@
-name: Service Skeleton Tests
+name: CI
 
 on:
   pull_request:
   push:
     branches:
-      - master
-    tags:
-      - v*
+      - "v1_0"
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    name: Ruby ${{ matrix.ruby }}
+
     strategy:
       matrix:
-        ruby: ["2.5", "2.6", "2.7"]
+        ruby:
+          - 2.5
+
     steps:
       - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0 # Fetch all history. Needed for `git describe`
-      - uses: actions/setup-ruby@v1
+
+      - name: Setup ruby
+        uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby }}
-      - name: Bundler cache
-        uses: actions/cache@v2
-        with:
-          path: vendor/bundle
-          key: ${{ runner.os }}-${{ matrix.ruby }}-gems-${{ hashFiles('**/Gemfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.ruby }}-gems-
-      - name: Setup gems
-        run: |
-          gem install bundler
-          bundle config path vendor/bundle
-          bundle install --jobs 4
-      - name: Rubocop
+          bundler-cache: true
+
+      - name: Lint
         run: bundle exec rubocop
+
       - name: Tests
-        run: bundle exec rspec
-      - name: Ultravisor Tests
-        run: bundle exec rspec ultravisor/spec
+        run: bundle exec rake test
+
   publish:
-    if: contains(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/v1_0')
     needs: build
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v2
+
       - name: Release Gem
-        uses: CvX/publish-rubygems-action@master
+        uses: discourse/publish-rubygems-action@v2-beta
         env:
-          RUBYGEMS_API_KEY: ${{secrets.RUBYGEMS_API_KEY}}
+          RUBYGEMS_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}
+          GIT_EMAIL: team@discourse.org
+          GIT_NAME: discoursebot
