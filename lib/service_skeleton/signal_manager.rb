@@ -81,7 +81,7 @@ module ServiceSkeleton
               logger.error(logloc) { "Mysterious return from select: #{ios.inspect}" }
             end
           end
-        rescue IOError
+        rescue IOError, Errno::EBADF
           # Something has gone terribly wrong here... bail
           break
         rescue StandardError => ex
