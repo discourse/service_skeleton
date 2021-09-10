@@ -268,7 +268,7 @@ default for a config variable, like so:
     class GenericHelloService
       include ServiceSkeleton
 
-      string :RECIPIENT, match: /\a\w+\z/, default: "Anonymous Coward"
+      string :RECIPIENT, match: /\A\w+\z/, default: "Anonymous Coward"
 
       # ...
 
