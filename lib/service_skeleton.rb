@@ -3,6 +3,8 @@
 require_relative "service_skeleton/config_class"
 require_relative "service_skeleton/config_variables"
 require_relative "service_skeleton/generator"
+require_relative "service_skeleton/hurriable_timer"
+require_relative "service_skeleton/hurriable_timer_sequence"
 require_relative "service_skeleton/logging_helpers"
 require_relative "service_skeleton/metrics_methods"
 require_relative "service_skeleton/service_name"
