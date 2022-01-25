@@ -7,8 +7,10 @@ require 'rspec/mocks'
 Thread.report_on_exception = false
 
 require 'simplecov'
-SimpleCov.start do
-  add_filter('spec')
+unless SimpleCov.running
+  SimpleCov.start do
+    add_filter('spec')
+  end
 end
 
 class ListIncompletelyCoveredFiles
