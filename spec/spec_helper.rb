@@ -6,10 +6,12 @@ require 'rspec/core'
 require 'rspec/mocks'
 
 require 'simplecov'
-SimpleCov.start do
-  add_filter('spec')
+unless SimpleCov.running
+  SimpleCov.start do
+    add_filter('spec')
+  end
+  SimpleCov.refuse_coverage_drop
 end
-SimpleCov.refuse_coverage_drop
 
 class ListIncompletelyCoveredFiles
   def format(result)
