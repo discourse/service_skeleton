@@ -7,6 +7,21 @@ on:
       - main
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+          bundler-cache: true
+
+      - name: Lint
+        run: bundle exec rubocop
+
   build:
     runs-on: ubuntu-latest
 
@@ -29,15 +44,12 @@ jobs:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
 
-      - name: Lint
-        run: bundle exec rubocop
-
       - name: Tests
         run: bundle exec rake test
 
   publish:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: build
+    needs: [lint, build]
     runs-on: ubuntu-latest
 
     steps:
