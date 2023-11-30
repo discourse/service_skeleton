@@ -79,7 +79,7 @@ describe ServiceSkeleton::Generator do
       generate
     end
 
-    context "signal handler" do
+    describe "signal handler" do
       def handlers_for(spec)
         allow(ultravisor).to receive(:add_child) do |**kwargs|
           next ultravisor if kwargs[:id] != :signal_handler
@@ -185,7 +185,7 @@ describe ServiceSkeleton::Generator do
       end
     end
 
-    context "metrics setup" do
+    describe "metrics setup" do
       let(:svc_class) { Class.new.tap { |k| k.include(ServiceSkeleton) } }
       let(:metrics)   { svc_class.registered_metrics }
 
@@ -222,7 +222,8 @@ describe ServiceSkeleton::Generator do
       it "includes Ruby VM metrics" do
         generate
 
-        expect(registry.get(:ruby_vm_class_serial)).to be_a(Frankenstein::CollectedMetric)
+        key = "ruby_vm_#{RubyVM.stat.keys.first}".to_sym
+        expect(registry.get(key)).to be_a(Frankenstein::CollectedMetric)
       end
 
       it "includes process metrics" do
@@ -232,9 +233,10 @@ describe ServiceSkeleton::Generator do
       end
 
       it "doesn't register the metrics modules as methods" do
-        %i{ruby_gc_count ruby_vm_class_serial process_start_time_seconds}.each do |m|
-          expect(registry.methods).to_not include(m)
-        end
+        expect(registry.methods).to_not include(:ruby_gc_count)
+        ruby_vm_key = "ruby_vm_#{RubyVM.stat.keys.first}".to_sym
+        expect(registry.methods).to_not include(ruby_vm_key)
+        expect(registry.methods).to_not include(:process_start_time_seconds)
       end
     end
   end

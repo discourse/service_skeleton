@@ -10,7 +10,7 @@ describe Ultravisor::Child do
   let(:child) { Ultravisor::Child.new(**args) }
 
   describe "#unsafe_instance" do
-    context "by default" do
+    context "with default args" do
       it "explodes" do
         expect { child.unsafe_instance }.to raise_error(Ultravisor::ThreadSafetyError)
       end
