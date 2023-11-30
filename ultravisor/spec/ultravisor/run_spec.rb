@@ -69,13 +69,13 @@ describe Ultravisor do
         ultravisor.run
       end
 
-      context "that terminates" do
+      context "when the child terminates" do
         before(:each) do
           allow(ultravisor.instance_variable_get(:@queue)).to receive(:pop).and_return(child, :shutdown)
           allow(ultravisor).to receive(:sleep)
         end
 
-        context "within the limits of its restart policy" do
+        context "when in the limits of its restart policy" do
           it "spawns the child again" do
             expect(child).to receive(:spawn).exactly(:twice)
 
@@ -89,7 +89,7 @@ describe Ultravisor do
           end
         end
 
-        context "too often for its restart policy" do
+        context "when it terminates too often for its restart policy" do
           before(:each) do
             allow(child).to receive(:restart?).and_raise(Ultravisor::BlownRestartPolicyError)
             allow(logger).to receive(:error)

@@ -10,7 +10,7 @@ describe Ultravisor::Child do
   let(:mock_class) { Class.new.tap { |k| k.class_eval { def run; end } } }
 
   describe "#restart_delay" do
-    context "by default" do
+    context "with default args" do
       let(:args) { base_args }
 
       it "returns the default delay" do

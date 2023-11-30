@@ -77,7 +77,7 @@ describe Ultravisor::Child do
           expect(@thread).to have_received(:join).with(0.05)
         end
 
-        context "the worker doesn't finish quickly enough" do
+        context "when the worker doesn't finish quickly enough" do
           before(:each) do
             allow(mock_instance).to receive(:run) { sleep 15 }
           end
