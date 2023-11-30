@@ -79,7 +79,7 @@ describe ServiceSkeleton::Generator do
       generate
     end
 
-    context "signal handler" do
+    describe "signal handler" do
       def handlers_for(spec)
         allow(ultravisor).to receive(:add_child) do |**kwargs|
           next ultravisor if kwargs[:id] != :signal_handler
@@ -185,7 +185,7 @@ describe ServiceSkeleton::Generator do
       end
     end
 
-    context "metrics setup" do
+    describe "metrics setup" do
       let(:svc_class) { Class.new.tap { |k| k.include(ServiceSkeleton) } }
       let(:metrics)   { svc_class.registered_metrics }
 

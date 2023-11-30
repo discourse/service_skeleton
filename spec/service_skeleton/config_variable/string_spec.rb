@@ -72,7 +72,7 @@ describe ServiceSkeleton::ConfigVariables do
           end
         end
 
-        context "and a default" do
+        context "with a default" do
           let(:opts) { { sensitive: true, default: "hey" } }
 
           it "does not add the variable to the environment" do

@@ -93,7 +93,7 @@ describe ServiceSkeleton::ConfigVariables do
           expect { variable(env).redact!(env) }.to raise_error(ServiceSkeleton::Error::InvalidEnvironmentError)
         end
 
-        context "and a default" do
+        context "with a default" do
           let(:opts) { { sensitive: true, default: true } }
 
           it "does not add the variable to the environment" do
@@ -117,7 +117,7 @@ describe ServiceSkeleton::ConfigVariables do
           expect(variable("MY_YAML_FILE" => "/some/file").value).to be_a(value_class)
         end
 
-        context "and a default" do
+        context "with a default" do
           let(:opts) { { klass: value_class, default: "bob" } }
 
           it "does not instantiate the class" do
