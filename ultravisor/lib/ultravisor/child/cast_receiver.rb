@@ -4,8 +4,8 @@ class Ultravisor::Child::CastReceiver < BasicObject
     @blk = blk
   end
 
-  def method_missing(name, *args, &blk)
-    castback = ::Ultravisor::Child::Cast.new(name, args, blk)
+  def method_missing(name, *args, **kwargs, &blk)
+    castback = ::Ultravisor::Child::Cast.new(name, args, kwargs, blk)
     @blk.call(castback)
   end
 end
