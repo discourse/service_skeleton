@@ -106,6 +106,30 @@ describe Ultravisor::Child do
 
         expect { child.cast.to_s }.to_not raise_error
       end
+
+      context "with keyword arguments" do
+        class Child
+          def run
+          end
+
+          def process
+            process_castcall
+          end
+
+          def kwarg(message:)
+            raise "#{message} was passed"
+          end
+        end
+
+        let(:args) do
+          { id: :child, klass: Child, method: :run, enable_castcall: true, access: :unsafe }
+        end
+
+        it "forwards them" do
+          child.cast.kwarg(message: "hey")
+          expect { child.unsafe_instance.process }.to raise_error("hey was passed")
+        end
+      end
     end
   end
 end

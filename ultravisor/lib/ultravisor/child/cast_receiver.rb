@@ -8,4 +8,5 @@ class Ultravisor::Child::CastReceiver < BasicObject
     castback = ::Ultravisor::Child::Cast.new(name, args, blk)
     @blk.call(castback)
   end
+  ruby2_keywords :method_missing if respond_to?(:ruby2_keywords, true)
 end
